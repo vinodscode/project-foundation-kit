@@ -105,7 +105,8 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
           start_date: loan.startDate.toISOString(),
           notes: loan.notes,
           loan_type: loan.loanType,
-          gold_grams: loan.goldGrams
+          gold_grams: loan.goldGrams,
+          user_id: (await supabase.auth.getUser()).data.user?.id
         })
         .select()
         .single();
@@ -190,7 +191,8 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
           amount: payment.amount,
           payment_date: payment.date.toISOString(),
           notes: payment.notes,
-          payment_type: payment.type
+          payment_type: payment.type,
+          user_id: (await supabase.auth.getUser()).data.user?.id
         })
         .select()
         .single();

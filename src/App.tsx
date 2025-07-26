@@ -11,6 +11,9 @@ import LoanDetails from "./pages/LoanDetails";
 import EditLoan from "./pages/EditLoan";
 import NotFound from "./pages/NotFound";
 import Calculator from "./pages/Calculator";
+import Auth from "./pages/Auth";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { useEffect } from "react";
 
 // Remove App.css import as it conflicts with our styling
@@ -33,20 +36,23 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light">
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/add-loan" element={<AddLoan />} />
-              <Route path="/loans/:id" element={<LoanDetails />} />
-              <Route path="/loans/:id/edit" element={<EditLoan />} />
-              <Route path="/calculator" element={<Calculator />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+                <Route path="/add-loan" element={<ProtectedRoute><AddLoan /></ProtectedRoute>} />
+                <Route path="/loans/:id" element={<ProtectedRoute><LoanDetails /></ProtectedRoute>} />
+                <Route path="/loans/:id/edit" element={<ProtectedRoute><EditLoan /></ProtectedRoute>} />
+                <Route path="/calculator" element={<ProtectedRoute><Calculator /></ProtectedRoute>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

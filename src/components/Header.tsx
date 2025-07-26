@@ -1,12 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Settings, Calculator, Menu } from "lucide-react";
+import { Settings, Calculator, Menu, LogOut, User } from "lucide-react";
 import { formatCurrency } from "@/lib/store";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import Logo from "./Logo";
 import NotificationDropdown from "./NotificationDropdown";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface HeaderProps {
   totalAmount: number;
@@ -18,6 +20,25 @@ interface HeaderProps {
 const Header = ({ totalAmount, monthlyInterest }: HeaderProps) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been logged out of your account.",
+      });
+      navigate('/auth');
+    } catch (error) {
+      toast({
+        title: "Sign out failed",
+        description: "There was an error signing you out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
   
   return (
     <header className="sticky top-0 z-50 bg-white/50 dark:bg-gray-900/50 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50 shadow-sm w-full">
@@ -54,6 +75,16 @@ const Header = ({ totalAmount, monthlyInterest }: HeaderProps) => {
                     <SheetTitle>Menu</SheetTitle>
                   </SheetHeader>
                   <div className="flex flex-col gap-4 py-6">
+                    <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                        <User size={16} className="text-primary-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{user?.email}</p>
+                        <p className="text-xs text-muted-foreground">Account</p>
+                      </div>
+                    </div>
+                    
                     <Button
                       variant="outline"
                       size="sm"
@@ -68,6 +99,16 @@ const Header = ({ totalAmount, monthlyInterest }: HeaderProps) => {
                       <span className="text-sm font-medium">Theme</span>
                       <ThemeToggle />
                     </div>
+                    
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleSignOut}
+                      className="flex items-center justify-start gap-2 w-full mt-4"
+                    >
+                      <LogOut size={16} />
+                      <span>Sign Out</span>
+                    </Button>
                   </div>
                 </SheetContent>
               </Sheet>
@@ -101,10 +142,30 @@ const Header = ({ totalAmount, monthlyInterest }: HeaderProps) => {
                     <SheetTitle>Settings</SheetTitle>
                   </SheetHeader>
                   <div className="py-6 space-y-6">
+                    <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                        <User size={16} className="text-primary-foreground" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{user?.email}</p>
+                        <p className="text-xs text-muted-foreground">Account</p>
+                      </div>
+                    </div>
+                    
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Theme</span>
                       <ThemeToggle />
                     </div>
+                    
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleSignOut}
+                      className="flex items-center justify-center gap-2 w-full"
+                    >
+                      <LogOut size={16} />
+                      <span>Sign Out</span>
+                    </Button>
                   </div>
                 </SheetContent>
               </Sheet>
