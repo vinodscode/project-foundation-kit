@@ -14,7 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      loans: {
+        Row: {
+          amount: number
+          borrower_name: string
+          created_at: string
+          gold_grams: number | null
+          id: string
+          interest_rate: number
+          loan_type: string | null
+          notes: string | null
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          borrower_name: string
+          created_at?: string
+          gold_grams?: number | null
+          id?: string
+          interest_rate: number
+          loan_type?: string | null
+          notes?: string | null
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          borrower_name?: string
+          created_at?: string
+          gold_grams?: number | null
+          id?: string
+          interest_rate?: number
+          loan_type?: string | null
+          notes?: string | null
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          loan_id: string
+          notes: string | null
+          payment_date: string
+          payment_type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          loan_id: string
+          notes?: string | null
+          payment_date: string
+          payment_type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          loan_id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

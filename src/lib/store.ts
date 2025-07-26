@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { v4 as uuidv4 } from 'uuid';
 import { Loan, Payment } from './types';
+import { supabase } from '@/integrations/supabase/client';
 
 // Define the store type with the interfaces from types.ts
 export type LoanStoreState = {
@@ -26,38 +26,29 @@ export type LoanStoreState = {
   getFilteredLoans: () => Loan[];
 };
 
-const getLocalStorageLoans = (): Loan[] => {
-  try {
-    const loans = localStorage.getItem('loans');
-    if (!loans) return [];
-
-    const parsedLoans = JSON.parse(loans);
-
-    // Convert string dates back to Date objects
-    return parsedLoans.map((loan: any) => ({
-      ...loan,
-      startDate: new Date(loan.startDate),
-      payments: loan.payments?.map((payment: any) => ({
-        ...payment,
-        date: new Date(payment.date),
-      })) || []
-    }));
-  } catch (error) {
-    console.error("Error fetching loans from local storage:", error);
-    return [];
-  }
-};
-
-const setLocalStorageLoans = (loans: Loan[]) => {
-  try {
-    localStorage.setItem('loans', JSON.stringify(loans));
-  } catch (error) {
-    console.error("Error saving loans to local storage:", error);
-  }
+// Helper function to transform database loan to app loan format
+const transformDbLoanToAppLoan = (dbLoan: any, payments: any[] = []): Loan => {
+  return {
+    id: dbLoan.id,
+    borrowerName: dbLoan.borrower_name,
+    amount: parseFloat(dbLoan.amount),
+    interestRate: parseFloat(dbLoan.interest_rate),
+    startDate: new Date(dbLoan.start_date),
+    notes: dbLoan.notes,
+    loanType: dbLoan.loan_type as 'Gold' | 'Bond',
+    goldGrams: dbLoan.gold_grams ? parseFloat(dbLoan.gold_grams) : undefined,
+    payments: payments.map(payment => ({
+      id: payment.id,
+      amount: parseFloat(payment.amount),
+      date: new Date(payment.payment_date),
+      notes: payment.notes,
+      type: payment.payment_type as 'principal' | 'interest'
+    }))
+  };
 };
 
 export const useLoanStore = create<LoanStoreState>((set, get) => ({
-  loans: getLocalStorageLoans(),
+  loans: [],
   isLoading: false,
   error: null,
   searchQuery: '',
@@ -65,81 +56,201 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
   fetchLoans: async () => {
     set({ isLoading: true, error: null });
     try {
-      // Simulate fetching loans from an API
-      const loans = getLocalStorageLoans();
-      set({ loans: loans, isLoading: false });
+      // Fetch loans with their payments
+      const { data: loansData, error: loansError } = await supabase
+        .from('loans')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (loansError) throw loansError;
+
+      // Fetch all payments for these loans
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payments')
+        .select('*')
+        .order('payment_date', { ascending: false });
+
+      if (paymentsError) throw paymentsError;
+
+      // Group payments by loan_id
+      const paymentsByLoanId = (paymentsData || []).reduce((acc, payment) => {
+        if (!acc[payment.loan_id]) {
+          acc[payment.loan_id] = [];
+        }
+        acc[payment.loan_id].push(payment);
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      // Transform and combine the data
+      const loans = (loansData || []).map(loan => 
+        transformDbLoanToAppLoan(loan, paymentsByLoanId[loan.id] || [])
+      );
+
+      set({ loans, isLoading: false });
     } catch (error) {
+      console.error('Error fetching loans:', error);
       set({ error: error as Error, isLoading: false });
     }
   },
   
   addLoan: async (loan) => {
-    return new Promise((resolve) => {
-      const newLoan: Loan = {
-        id: uuidv4(),
-        ...loan,
-        payments: [],
-      };
+    set({ isLoading: true, error: null });
+    try {
+      const { data, error } = await supabase
+        .from('loans')
+        .insert({
+          borrower_name: loan.borrowerName,
+          amount: loan.amount,
+          interest_rate: loan.interestRate,
+          start_date: loan.startDate.toISOString(),
+          notes: loan.notes,
+          loan_type: loan.loanType,
+          gold_grams: loan.goldGrams
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newLoan = transformDbLoanToAppLoan(data);
       
-      set((state) => {
-        const updatedLoans = [...state.loans, newLoan];
-        setLocalStorageLoans(updatedLoans);
-        return { loans: updatedLoans };
-      });
+      set((state) => ({
+        loans: [...state.loans, newLoan],
+        isLoading: false
+      }));
       
-      resolve(newLoan);
-    });
+      return newLoan;
+    } catch (error) {
+      console.error('Error adding loan:', error);
+      set({ error: error as Error, isLoading: false });
+      throw error;
+    }
   },
   
   updateLoan: async (loanId, loanData) => {
-    set((state) => {
-      const updatedLoans = state.loans.map((loan) =>
-        loan.id === loanId ? { ...loan, ...loanData } : loan
-      );
-      setLocalStorageLoans(updatedLoans);
-      return { loans: updatedLoans };
-    });
+    set({ isLoading: true, error: null });
+    try {
+      const updateData: any = {};
+      if (loanData.borrowerName !== undefined) updateData.borrower_name = loanData.borrowerName;
+      if (loanData.amount !== undefined) updateData.amount = loanData.amount;
+      if (loanData.interestRate !== undefined) updateData.interest_rate = loanData.interestRate;
+      if (loanData.startDate !== undefined) updateData.start_date = loanData.startDate.toISOString();
+      if (loanData.notes !== undefined) updateData.notes = loanData.notes;
+      if (loanData.loanType !== undefined) updateData.loan_type = loanData.loanType;
+      if (loanData.goldGrams !== undefined) updateData.gold_grams = loanData.goldGrams;
+
+      const { error } = await supabase
+        .from('loans')
+        .update(updateData)
+        .eq('id', loanId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        loans: state.loans.map((loan) =>
+          loan.id === loanId ? { ...loan, ...loanData } : loan
+        ),
+        isLoading: false
+      }));
+    } catch (error) {
+      console.error('Error updating loan:', error);
+      set({ error: error as Error, isLoading: false });
+      throw error;
+    }
   },
   
   deleteLoan: async (loanId) => {
-    set((state) => {
-      const updatedLoans = state.loans.filter((loan) => loan.id !== loanId);
-      setLocalStorageLoans(updatedLoans);
-      return { loans: updatedLoans };
-    });
+    set({ isLoading: true, error: null });
+    try {
+      const { error } = await supabase
+        .from('loans')
+        .delete()
+        .eq('id', loanId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        loans: state.loans.filter((loan) => loan.id !== loanId),
+        isLoading: false
+      }));
+    } catch (error) {
+      console.error('Error deleting loan:', error);
+      set({ error: error as Error, isLoading: false });
+      throw error;
+    }
   },
   
   addPayment: async (loanId, payment) => {
-    set((state) => {
-      const updatedLoans = state.loans.map((loan) => {
-        if (loan.id === loanId) {
-          const newPayment = { ...payment, id: uuidv4() };
-          return {
-            ...loan,
-            payments: [...(loan.payments || []), newPayment],
-          };
-        }
-        return loan;
-      });
-      setLocalStorageLoans(updatedLoans);
-      return { loans: updatedLoans };
-    });
+    set({ isLoading: true, error: null });
+    try {
+      const { data, error } = await supabase
+        .from('payments')
+        .insert({
+          loan_id: loanId,
+          amount: payment.amount,
+          payment_date: payment.date.toISOString(),
+          notes: payment.notes,
+          payment_type: payment.type
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const newPayment: Payment = {
+        id: data.id,
+        amount: Number(data.amount),
+        date: new Date(data.payment_date),
+        notes: data.notes,
+        type: data.payment_type as 'principal' | 'interest'
+      };
+
+      set((state) => ({
+        loans: state.loans.map((loan) => {
+          if (loan.id === loanId) {
+            return {
+              ...loan,
+              payments: [...(loan.payments || []), newPayment],
+            };
+          }
+          return loan;
+        }),
+        isLoading: false
+      }));
+    } catch (error) {
+      console.error('Error adding payment:', error);
+      set({ error: error as Error, isLoading: false });
+      throw error;
+    }
   },
   
   deletePayment: async (loanId, paymentId) => {
-    set((state) => {
-      const updatedLoans = state.loans.map((loan) => {
-        if (loan.id === loanId) {
-          return {
-            ...loan,
-            payments: loan.payments.filter(p => p.id !== paymentId)
-          };
-        }
-        return loan;
-      });
-      setLocalStorageLoans(updatedLoans);
-      return { loans: updatedLoans };
-    });
+    set({ isLoading: true, error: null });
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .delete()
+        .eq('id', paymentId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        loans: state.loans.map((loan) => {
+          if (loan.id === loanId) {
+            return {
+              ...loan,
+              payments: loan.payments.filter(p => p.id !== paymentId)
+            };
+          }
+          return loan;
+        }),
+        isLoading: false
+      }));
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      set({ error: error as Error, isLoading: false });
+      throw error;
+    }
   },
   
   getLoanById: (loanId) => {
