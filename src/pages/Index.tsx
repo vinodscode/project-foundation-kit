@@ -143,27 +143,27 @@ const Index = () => {
               <div className="relative overflow-hidden">
                 {/* Pull to Refresh Indicator - positioned within loans section */}
                 <div 
-                  className={`relative bg-primary/10 backdrop-blur-sm transition-all duration-300 rounded-lg mb-4 ${
-                    isPulling || isRefreshing ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                  className={`relative bg-primary/10 backdrop-blur-sm transition-all duration-300 rounded-lg overflow-hidden ${
+                    isPulling || isRefreshing ? 'opacity-100 mb-4' : 'opacity-0 mb-0'
                   }`}
                   style={{
-                    height: `${Math.min(pullProgress, 60)}px`,
-                    transform: `translateY(${isPulling || isRefreshing ? 0 : -60}px)`,
-                    marginBottom: isPulling || isRefreshing ? '16px' : '0px'
+                    height: `${isPulling || isRefreshing ? Math.min(pullProgress, 60) : 0}px`,
+                    transform: `translateY(${isPulling || isRefreshing ? 0 : -20}px)`,
+                    transition: 'all 0.3s ease-out'
                   }}
                 >
-                  <div className="flex items-center justify-center h-full">
-                    <div className="flex items-center gap-2 text-primary">
+                  <div className="flex items-center justify-center h-full min-h-[50px]">
+                    <div className="flex items-center gap-2 text-primary px-4 py-2">
                       <RefreshCw 
                         size={18} 
-                        className={`transition-transform duration-300 ${
+                        className={`transition-all duration-300 ${
                           isRefreshing ? 'animate-spin' : ''
                         }`}
                         style={{
                           transform: `rotate(${isRefreshing ? 0 : pullProgress * 3}deg)`
                         }}
                       />
-                      <span className="text-sm font-medium">
+                      <span className="text-sm font-medium whitespace-nowrap">
                         {isRefreshing ? 'Refreshing loans...' : pullProgress > 50 ? 'Release to refresh' : 'Pull to refresh'}
                       </span>
                     </div>
