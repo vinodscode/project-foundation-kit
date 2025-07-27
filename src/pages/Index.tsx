@@ -140,41 +140,42 @@ const Index = () => {
                 </p>
               </div>
             ) : (
-              <div className="relative">
-                {/* Pull to Refresh Indicator */}
+              <div className="relative overflow-hidden">
+                {/* Pull to Refresh Indicator - positioned within loans section */}
                 <div 
-                  className={`fixed top-0 left-0 right-0 z-50 bg-primary/10 backdrop-blur-sm transition-all duration-300 ${
+                  className={`relative bg-primary/10 backdrop-blur-sm transition-all duration-300 rounded-lg mb-4 ${
                     isPulling || isRefreshing ? 'opacity-100' : 'opacity-0 pointer-events-none'
                   }`}
                   style={{
-                    height: `${Math.min(pullProgress, 80)}px`,
-                    transform: `translateY(${isPulling ? 0 : -80}px)`
+                    height: `${Math.min(pullProgress, 60)}px`,
+                    transform: `translateY(${isPulling || isRefreshing ? 0 : -60}px)`,
+                    marginBottom: isPulling || isRefreshing ? '16px' : '0px'
                   }}
                 >
                   <div className="flex items-center justify-center h-full">
                     <div className="flex items-center gap-2 text-primary">
                       <RefreshCw 
-                        size={20} 
+                        size={18} 
                         className={`transition-transform duration-300 ${
                           isRefreshing ? 'animate-spin' : ''
-                        } ${pullProgress > 60 ? 'rotate-180' : ''}`}
+                        }`}
                         style={{
-                          transform: `rotate(${pullProgress * 2}deg) ${isRefreshing ? '' : pullProgress > 60 ? 'rotate(180deg)' : ''}`
+                          transform: `rotate(${isRefreshing ? 0 : pullProgress * 3}deg)`
                         }}
                       />
                       <span className="text-sm font-medium">
-                        {isRefreshing ? 'Refreshing...' : pullProgress > 60 ? 'Release to refresh' : 'Pull to refresh'}
+                        {isRefreshing ? 'Refreshing loans...' : pullProgress > 50 ? 'Release to refresh' : 'Pull to refresh'}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 <div 
-                  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 transition-transform duration-300"
+                  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 transition-transform duration-200"
                   style={{
                     overscrollBehavior: 'contain',
                     WebkitOverflowScrolling: 'touch',
-                    transform: `translateY(${isPulling ? pullProgress * 0.5 : 0}px)`
+                    transform: `translateY(${isPulling ? Math.min(pullProgress * 0.3, 18) : 0}px)`
                   }}
                   onTouchStart={(e) => {
                     const startY = e.touches[0].clientY;
@@ -190,7 +191,7 @@ const Index = () => {
                       
                       const currentY = moveEvent.touches[0].clientY;
                       const diff = Math.max(0, currentY - startY);
-                      currentPullProgress = Math.min(diff * 0.8, 80);
+                      currentPullProgress = Math.min(diff * 0.6, 60);
                       
                       setPullProgress(currentPullProgress);
                       
@@ -200,7 +201,7 @@ const Index = () => {
                     };
                     
                     const handleTouchEnd = () => {
-                      if (currentPullProgress > 60 && scrollTop === 0 && !isRefreshing) {
+                      if (currentPullProgress > 50 && scrollTop === 0 && !isRefreshing) {
                         handleRefresh();
                       }
                       
