@@ -102,9 +102,13 @@ const EditLoan = () => {
     navigate(`/loans/${loan.id}`);
   };
   
-  const handleDelete = () => {
-    deleteLoan(loan.id);
-    navigate("/");
+  const handleDelete = async () => {
+    try {
+      await deleteLoan(loan.id);
+      navigate("/");
+    } catch (error) {
+      console.error("Error deleting loan:", error);
+    }
   };
   
   return (

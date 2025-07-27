@@ -134,7 +134,32 @@ const Index = () => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              <div 
+                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"
+                style={{
+                  overscrollBehavior: 'contain',
+                  WebkitOverflowScrolling: 'touch'
+                }}
+                onTouchStart={(e) => {
+                  const startY = e.touches[0].clientY;
+                  const scrollTop = window.scrollY;
+                  
+                  const handleTouchMove = (moveEvent: TouchEvent) => {
+                    const currentY = moveEvent.touches[0].clientY;
+                    const diff = currentY - startY;
+                    
+                    if (diff > 50 && scrollTop === 0 && !isRefreshing) {
+                      handleRefresh();
+                      document.removeEventListener('touchmove', handleTouchMove);
+                    }
+                  };
+                  
+                  document.addEventListener('touchmove', handleTouchMove, { passive: true });
+                  document.addEventListener('touchend', () => {
+                    document.removeEventListener('touchmove', handleTouchMove);
+                  }, { once: true });
+                }}
+              >
                 {filteredLoans.map((loan) => (
                   <LoanCard key={loan.id} loan={loan} />
                 ))}
