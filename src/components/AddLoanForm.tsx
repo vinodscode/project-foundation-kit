@@ -59,22 +59,26 @@ const AddLoanForm = ({ className }: AddLoanFormProps) => {
     return Object.keys(newErrors).length === 0;
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validate()) return;
     
-    addLoan({
-      borrowerName,
-      amount: parseFloat(amount),
-      interestRate: parseFloat(interestRate),
-      startDate: startDate!,
-      notes: notes.trim() || undefined,
-      loanType,
-      goldGrams: loanType === 'Gold' ? parseFloat(goldGrams) : undefined,
-    });
-    
-    navigate("/");
+    try {
+      await addLoan({
+        borrowerName,
+        amount: parseFloat(amount),
+        interestRate: parseFloat(interestRate),
+        startDate: startDate!,
+        notes: notes.trim() || undefined,
+        loanType,
+        goldGrams: loanType === 'Gold' ? parseFloat(goldGrams) : undefined,
+      });
+      
+      navigate("/");
+    } catch (error) {
+      console.error("Error adding loan:", error);
+    }
   };
   
   return (

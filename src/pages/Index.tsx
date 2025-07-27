@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Search } from "lucide-react";
+import { PlusCircle, Search, RefreshCw } from "lucide-react";
 import Header from "@/components/Header";
 import EmptyState from "@/components/EmptyState";
 import LoanCard from "@/components/LoanCard";
@@ -12,6 +12,7 @@ import { Loan } from "@/lib/types";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const loans = useLoanStore((state) => state.loans);
   const isLoading = useLoanStore((state) => state.isLoading);
@@ -27,6 +28,17 @@ const Index = () => {
       console.error("Error fetching loans in Index page:", err);
     });
   }, [fetchLoans]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchLoans();
+    } catch (err) {
+      console.error("Error refreshing loans:", err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
   
   const renderLoading = () => (
     <div className="container px-4 sm:px-6 max-w-screen-2xl mx-auto">
@@ -89,6 +101,16 @@ const Index = () => {
               <h2 className="text-xl font-medium">Your Loans</h2>
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <SearchBox />
+                <Button
+                  onClick={handleRefresh}
+                  size="sm"
+                  variant="ghost"
+                  disabled={isRefreshing}
+                  className="gap-2"
+                >
+                  <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
+                  <span className="hidden sm:inline">Refresh</span>
+                </Button>
                 <Button
                   onClick={() => navigate("/add-loan")}
                   className="gap-2 ml-auto sm:ml-0"
