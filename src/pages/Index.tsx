@@ -13,6 +13,8 @@ import { Loan } from "@/lib/types";
 const Index = () => {
   const navigate = useNavigate();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pullProgress, setPullProgress] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
   
   const loans = useLoanStore((state) => state.loans);
   const isLoading = useLoanStore((state) => state.isLoading);
@@ -31,8 +33,12 @@ const Index = () => {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
+    setIsPulling(false);
+    setPullProgress(0);
     try {
       await fetchLoans();
+      // Add a small delay to show the animation
+      await new Promise(resolve => setTimeout(resolve, 500));
     } catch (err) {
       console.error("Error refreshing loans:", err);
     } finally {
@@ -134,35 +140,84 @@ const Index = () => {
                 </p>
               </div>
             ) : (
-              <div 
-                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"
-                style={{
-                  overscrollBehavior: 'contain',
-                  WebkitOverflowScrolling: 'touch'
-                }}
-                onTouchStart={(e) => {
-                  const startY = e.touches[0].clientY;
-                  const scrollTop = window.scrollY;
-                  
-                  const handleTouchMove = (moveEvent: TouchEvent) => {
-                    const currentY = moveEvent.touches[0].clientY;
-                    const diff = currentY - startY;
+              <div className="relative">
+                {/* Pull to Refresh Indicator */}
+                <div 
+                  className={`fixed top-0 left-0 right-0 z-50 bg-primary/10 backdrop-blur-sm transition-all duration-300 ${
+                    isPulling || isRefreshing ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                  }`}
+                  style={{
+                    height: `${Math.min(pullProgress, 80)}px`,
+                    transform: `translateY(${isPulling ? 0 : -80}px)`
+                  }}
+                >
+                  <div className="flex items-center justify-center h-full">
+                    <div className="flex items-center gap-2 text-primary">
+                      <RefreshCw 
+                        size={20} 
+                        className={`transition-transform duration-300 ${
+                          isRefreshing ? 'animate-spin' : ''
+                        } ${pullProgress > 60 ? 'rotate-180' : ''}`}
+                        style={{
+                          transform: `rotate(${pullProgress * 2}deg) ${isRefreshing ? '' : pullProgress > 60 ? 'rotate(180deg)' : ''}`
+                        }}
+                      />
+                      <span className="text-sm font-medium">
+                        {isRefreshing ? 'Refreshing...' : pullProgress > 60 ? 'Release to refresh' : 'Pull to refresh'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div 
+                  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 transition-transform duration-300"
+                  style={{
+                    overscrollBehavior: 'contain',
+                    WebkitOverflowScrolling: 'touch',
+                    transform: `translateY(${isPulling ? pullProgress * 0.5 : 0}px)`
+                  }}
+                  onTouchStart={(e) => {
+                    const startY = e.touches[0].clientY;
+                    const scrollTop = window.scrollY;
+                    let currentPullProgress = 0;
                     
-                    if (diff > 50 && scrollTop === 0 && !isRefreshing) {
-                      handleRefresh();
-                      document.removeEventListener('touchmove', handleTouchMove);
+                    if (scrollTop === 0 && !isRefreshing) {
+                      setIsPulling(true);
                     }
-                  };
-                  
-                  document.addEventListener('touchmove', handleTouchMove, { passive: true });
-                  document.addEventListener('touchend', () => {
-                    document.removeEventListener('touchmove', handleTouchMove);
-                  }, { once: true });
-                }}
-              >
-                {filteredLoans.map((loan) => (
-                  <LoanCard key={loan.id} loan={loan} />
-                ))}
+                    
+                    const handleTouchMove = (moveEvent: TouchEvent) => {
+                      if (scrollTop !== 0 || isRefreshing) return;
+                      
+                      const currentY = moveEvent.touches[0].clientY;
+                      const diff = Math.max(0, currentY - startY);
+                      currentPullProgress = Math.min(diff * 0.8, 80);
+                      
+                      setPullProgress(currentPullProgress);
+                      
+                      if (currentPullProgress > 0) {
+                        setIsPulling(true);
+                      }
+                    };
+                    
+                    const handleTouchEnd = () => {
+                      if (currentPullProgress > 60 && scrollTop === 0 && !isRefreshing) {
+                        handleRefresh();
+                      }
+                      
+                      setIsPulling(false);
+                      setPullProgress(0);
+                      document.removeEventListener('touchmove', handleTouchMove);
+                      document.removeEventListener('touchend', handleTouchEnd);
+                    };
+                    
+                    document.addEventListener('touchmove', handleTouchMove, { passive: true });
+                    document.addEventListener('touchend', handleTouchEnd, { once: true });
+                  }}
+                >
+                  {filteredLoans.map((loan) => (
+                    <LoanCard key={loan.id} loan={loan} />
+                  ))}
+                </div>
               </div>
             )}
           </div>
