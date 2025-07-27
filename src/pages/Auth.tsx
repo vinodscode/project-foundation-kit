@@ -119,8 +119,8 @@ const Auth = () => {
   };
   return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary p-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-center text-7xl font-normal text-[#0080ff]">ரூ
+        <CardHeader className="space-y-1 py-[10px]">
+          <CardTitle className="text-center text-7xl font-normal text-[#0080ff] my-0 mx-0 py-[15px]">ரூ
         </CardTitle>
           <CardDescription className="text-center">
 Manage your loans with ease and security</CardDescription>
