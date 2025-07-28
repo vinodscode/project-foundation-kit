@@ -104,10 +104,15 @@ const Index = () => {
           <EmptyState />
         ) : (
           <div className="container px-4 sm:px-6 max-w-screen-2xl mx-auto py-4">
-            <div className="flex flex-col gap-4 mb-4">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <h2 className="text-xl font-medium">Your Loans</h2>
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
+              <h2 className="text-xl font-medium">Your Loans</h2>
+              
+              <div className="flex flex-col sm:flex-row gap-2 flex-1 lg:ml-4">
+                <div className="flex-1">
+                  <SearchBox />
+                </div>
                 <div className="flex items-center gap-2">
+                  <LoanFilters />
                   <Button
                     onClick={handleRefresh}
                     size="sm"
@@ -128,13 +133,6 @@ const Index = () => {
                     <span>Add Loan</span>
                   </Button>
                 </div>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                <div className="flex-1">
-                  <SearchBox />
-                </div>
-                <LoanFilters />
               </div>
             </div>
             
