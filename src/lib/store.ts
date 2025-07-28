@@ -3,11 +3,20 @@ import { Loan, Payment } from './types';
 import { supabase } from '@/integrations/supabase/client';
 
 // Define the store type with the interfaces from types.ts
+export type SortOption = 'name' | 'amount' | 'date' | 'interest' | 'remaining';
+export type FilterOption = {
+  loanType: string[];
+  amountRange: { min: number; max: number } | null;
+};
+
 export type LoanStoreState = {
   loans: Loan[];
   isLoading: boolean;
   error: Error | null;
   searchQuery: string;
+  sortBy: SortOption;
+  sortOrder: 'asc' | 'desc';
+  filters: FilterOption;
   
   fetchLoans: () => Promise<void>;
   addLoan: (loan: Omit<Loan, 'id' | 'payments'>) => Promise<Loan>;
@@ -23,6 +32,10 @@ export type LoanStoreState = {
   getTotalPrincipalPaid: (loanId?: string) => number;
   setSearchQuery: (query: string) => void;
   clearSearch: () => void;
+  setSortBy: (sortBy: SortOption) => void;
+  setSortOrder: (order: 'asc' | 'desc') => void;
+  setFilters: (filters: Partial<FilterOption>) => void;
+  clearFilters: () => void;
   getFilteredLoans: () => Loan[];
 };
 
@@ -52,6 +65,12 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
   isLoading: false,
   error: null,
   searchQuery: '',
+  sortBy: 'date' as SortOption,
+  sortOrder: 'desc' as 'asc' | 'desc',
+  filters: {
+    loanType: [],
+    amountRange: null,
+  },
   
   fetchLoans: async () => {
     set({ isLoading: true, error: null });
@@ -345,20 +364,90 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
   clearSearch: () => {
     set({ searchQuery: '' });
   },
+
+  setSortBy: (sortBy) => {
+    set({ sortBy });
+  },
+
+  setSortOrder: (sortOrder) => {
+    set({ sortOrder });
+  },
+
+  setFilters: (newFilters) => {
+    set((state) => ({
+      filters: { ...state.filters, ...newFilters }
+    }));
+  },
+
+  clearFilters: () => {
+    set({
+      filters: {
+        loanType: [],
+        amountRange: null,
+      }
+    });
+  },
   
   getFilteredLoans: () => {
-    const { loans, searchQuery } = get();
+    const { loans, searchQuery, sortBy, sortOrder, filters } = get();
     
-    if (!searchQuery.trim()) {
-      return loans;
+    let filteredLoans = [...loans];
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filteredLoans = filteredLoans.filter((loan) => 
+        loan.borrowerName.toLowerCase().includes(query) ||
+        (loan.loanType || '').toLowerCase().includes(query) ||
+        loan.amount.toString().includes(query)
+      );
     }
     
-    const query = searchQuery.toLowerCase();
-    return loans.filter((loan) => 
-      loan.borrowerName.toLowerCase().includes(query) ||
-      (loan.loanType || '').toLowerCase().includes(query) ||
-      loan.amount.toString().includes(query)
-    );
+    // Apply loan type filter
+    if (filters.loanType.length > 0) {
+      filteredLoans = filteredLoans.filter((loan) => 
+        filters.loanType.includes(loan.loanType || 'Other')
+      );
+    }
+    
+    // Apply amount range filter
+    if (filters.amountRange) {
+      filteredLoans = filteredLoans.filter((loan) => 
+        loan.amount >= filters.amountRange!.min && 
+        loan.amount <= filters.amountRange!.max
+      );
+    }
+    
+    // Apply sorting
+    filteredLoans.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = a.borrowerName.localeCompare(b.borrowerName);
+          break;
+        case 'amount':
+          comparison = a.amount - b.amount;
+          break;
+        case 'date':
+          comparison = a.startDate.getTime() - b.startDate.getTime();
+          break;
+        case 'interest':
+          comparison = a.interestRate - b.interestRate;
+          break;
+        case 'remaining':
+          const aRemaining = get().getRemainingPrincipal(a.id);
+          const bRemaining = get().getRemainingPrincipal(b.id);
+          comparison = aRemaining - bRemaining;
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+    
+    return filteredLoans;
   },
 }));
 

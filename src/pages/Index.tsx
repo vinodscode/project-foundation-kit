@@ -8,6 +8,7 @@ import LoanCard from "@/components/LoanCard";
 import { useLoanStore } from "@/lib/store";
 import { Skeleton } from "@/components/ui/skeleton";
 import SearchBox from "@/components/SearchBox";
+import LoanFilters from "@/components/LoanFilters";
 import { Loan } from "@/lib/types";
 
 const Index = () => {
@@ -103,29 +104,37 @@ const Index = () => {
           <EmptyState />
         ) : (
           <div className="container px-4 sm:px-6 max-w-screen-2xl mx-auto py-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-              <h2 className="text-xl font-medium">Your Loans</h2>
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <SearchBox />
-                <Button
-                  onClick={handleRefresh}
-                  size="sm"
-                  variant="ghost"
-                  disabled={isRefreshing}
-                  className="gap-2"
-                >
-                  <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
-                  <span className="hidden sm:inline">Refresh</span>
-                </Button>
-                <Button
-                  onClick={() => navigate("/add-loan")}
-                  className="gap-2 ml-auto sm:ml-0"
-                  size="sm"
-                  variant="outline"
-                >
-                  <PlusCircle size={16} />
-                  <span>Add Loan</span>
-                </Button>
+            <div className="flex flex-col gap-4 mb-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <h2 className="text-xl font-medium">Your Loans</h2>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleRefresh}
+                    size="sm"
+                    variant="ghost"
+                    disabled={isRefreshing}
+                    className="gap-2"
+                  >
+                    <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
+                    <span className="hidden sm:inline">Refresh</span>
+                  </Button>
+                  <Button
+                    onClick={() => navigate("/add-loan")}
+                    className="gap-2"
+                    size="sm"
+                    variant="outline"
+                  >
+                    <PlusCircle size={16} />
+                    <span>Add Loan</span>
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                <div className="flex-1">
+                  <SearchBox />
+                </div>
+                <LoanFilters />
               </div>
             </div>
             
