@@ -9,6 +9,7 @@ import { useLoanStore } from "@/lib/store";
 import { Skeleton } from "@/components/ui/skeleton";
 import SearchBox from "@/components/SearchBox";
 import LoanFilters from "@/components/LoanFilters";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loan } from "@/lib/types";
 
 const Index = () => {
@@ -24,6 +25,8 @@ const Index = () => {
   const getTotalLent = useLoanStore((state) => state.getTotalLent);
   const getMonthlyInterest = useLoanStore((state) => state.getMonthlyInterest);
   const getFilteredLoans = useLoanStore((state) => state.getFilteredLoans);
+  const getActiveLoans = useLoanStore((state) => state.getActiveLoans);
+  const getCompletedLoans = useLoanStore((state) => state.getCompletedLoans);
   
   useEffect(() => {
     console.log("Index: Fetching loans");
@@ -88,7 +91,24 @@ const Index = () => {
   }
   
   const filteredLoans = getFilteredLoans();
-  console.log("Index: Search query:", searchQuery, "Total loans:", loans.length, "Filtered loans:", filteredLoans.length);
+  const activeLoans = getActiveLoans().filter(loan => {
+    // Apply the same filters to active loans
+    if (searchQuery && !loan.borrowerName.toLowerCase().includes(searchQuery.toLowerCase()) && 
+        !loan.notes?.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    return true;
+  });
+  const completedLoans = getCompletedLoans().filter(loan => {
+    // Apply the same filters to completed loans
+    if (searchQuery && !loan.borrowerName.toLowerCase().includes(searchQuery.toLowerCase()) && 
+        !loan.notes?.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    return true;
+  });
+  
+  console.log("Index: Search query:", searchQuery, "Total loans:", loans.length, "Active loans:", activeLoans.length, "Completed loans:", completedLoans.length);
   
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900 w-full">
@@ -136,98 +156,129 @@ const Index = () => {
               </div>
             </div>
             
-            {filteredLoans.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-3 mb-4">
-                  <Search size={20} className="text-gray-500" />
-                </div>
-                <h3 className="text-lg font-medium mb-1">No results found</h3>
-                <p className="text-sm text-gray-500 max-w-md">
-                  We couldn't find any loans matching your search. Try adjusting your search terms.
-                </p>
-              </div>
-            ) : (
-              <div className="relative overflow-hidden">
-                {/* Pull to Refresh Indicator - positioned within loans section */}
-                <div 
-                  className={`relative bg-primary/10 backdrop-blur-sm transition-all duration-300 rounded-lg overflow-hidden ${
-                    isPulling || isRefreshing ? 'opacity-100 mb-4' : 'opacity-0 mb-0'
-                  }`}
-                  style={{
-                    height: `${isPulling || isRefreshing ? Math.min(pullProgress, 60) : 0}px`,
-                    transform: `translateY(${isPulling || isRefreshing ? 0 : -20}px)`,
-                    transition: 'all 0.3s ease-out'
-                  }}
-                >
-                  <div className="flex items-center justify-center h-full min-h-[50px]">
-                    <div className="flex items-center gap-2 text-primary px-4 py-2">
-                      <RefreshCw 
-                        size={18} 
-                        className={`transition-all duration-300 ${
-                          isRefreshing ? 'animate-spin' : ''
-                        }`}
-                        style={{
-                          transform: `rotate(${isRefreshing ? 0 : pullProgress * 3}deg)`
-                        }}
-                      />
-                      <span className="text-sm font-medium whitespace-nowrap">
-                        {isRefreshing ? 'Refreshing loans...' : pullProgress > 50 ? 'Release to refresh' : 'Pull to refresh'}
-                      </span>
+            <Tabs defaultValue="active" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="active">Active Loans ({activeLoans.length})</TabsTrigger>
+                <TabsTrigger value="completed">Completed Loans ({completedLoans.length})</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="active" className="space-y-4">
+                {activeLoans.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-3 mb-4">
+                      <Search size={20} className="text-gray-500" />
+                    </div>
+                    <h3 className="text-lg font-medium mb-1">No active loans found</h3>
+                    <p className="text-sm text-gray-500 max-w-md">
+                      {searchQuery ? "No active loans match your search criteria." : "You don't have any active loans at the moment."}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="relative overflow-hidden">
+                    {/* Pull to Refresh Indicator - positioned within loans section */}
+                    <div 
+                      className={`relative bg-primary/10 backdrop-blur-sm transition-all duration-300 rounded-lg overflow-hidden ${
+                        isPulling || isRefreshing ? 'opacity-100 mb-4' : 'opacity-0 mb-0'
+                      }`}
+                      style={{
+                        height: `${isPulling || isRefreshing ? Math.min(pullProgress, 60) : 0}px`,
+                        transform: `translateY(${isPulling || isRefreshing ? 0 : -20}px)`,
+                        transition: 'all 0.3s ease-out'
+                      }}
+                    >
+                      <div className="flex items-center justify-center h-full min-h-[50px]">
+                        <div className="flex items-center gap-2 text-primary px-4 py-2">
+                          <RefreshCw 
+                            size={18} 
+                            className={`transition-all duration-300 ${
+                              isRefreshing ? 'animate-spin' : ''
+                            }`}
+                            style={{
+                              transform: `rotate(${isRefreshing ? 0 : pullProgress * 3}deg)`
+                            }}
+                          />
+                          <span className="text-sm font-medium whitespace-nowrap">
+                            {isRefreshing ? 'Refreshing loans...' : pullProgress > 50 ? 'Release to refresh' : 'Pull to refresh'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div 
+                      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 transition-transform duration-200"
+                      style={{
+                        overscrollBehavior: 'contain',
+                        WebkitOverflowScrolling: 'touch',
+                        transform: `translateY(${isPulling ? Math.min(pullProgress * 0.3, 18) : 0}px)`
+                      }}
+                      onTouchStart={(e) => {
+                        const startY = e.touches[0].clientY;
+                        const scrollTop = window.scrollY;
+                        let currentPullProgress = 0;
+                        
+                        if (scrollTop === 0 && !isRefreshing) {
+                          setIsPulling(true);
+                        }
+                        
+                        const handleTouchMove = (moveEvent: TouchEvent) => {
+                          if (scrollTop !== 0 || isRefreshing) return;
+                          
+                          const currentY = moveEvent.touches[0].clientY;
+                          const diff = Math.max(0, currentY - startY);
+                          currentPullProgress = Math.min(diff * 0.6, 60);
+                          
+                          setPullProgress(currentPullProgress);
+                          
+                          if (currentPullProgress > 0) {
+                            setIsPulling(true);
+                          }
+                        };
+                        
+                        const handleTouchEnd = () => {
+                          if (currentPullProgress > 50 && scrollTop === 0 && !isRefreshing) {
+                            handleRefresh();
+                          }
+                          
+                          setIsPulling(false);
+                          setPullProgress(0);
+                          document.removeEventListener('touchmove', handleTouchMove);
+                          document.removeEventListener('touchend', handleTouchEnd);
+                        };
+                        
+                        document.addEventListener('touchmove', handleTouchMove, { passive: true });
+                        document.addEventListener('touchend', handleTouchEnd, { once: true });
+                      }}
+                    >
+                      {activeLoans.map((loan) => (
+                        <LoanCard key={loan.id} loan={loan} />
+                      ))}
                     </div>
                   </div>
-                </div>
-
-                <div 
-                  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 transition-transform duration-200"
-                  style={{
-                    overscrollBehavior: 'contain',
-                    WebkitOverflowScrolling: 'touch',
-                    transform: `translateY(${isPulling ? Math.min(pullProgress * 0.3, 18) : 0}px)`
-                  }}
-                  onTouchStart={(e) => {
-                    const startY = e.touches[0].clientY;
-                    const scrollTop = window.scrollY;
-                    let currentPullProgress = 0;
-                    
-                    if (scrollTop === 0 && !isRefreshing) {
-                      setIsPulling(true);
-                    }
-                    
-                    const handleTouchMove = (moveEvent: TouchEvent) => {
-                      if (scrollTop !== 0 || isRefreshing) return;
-                      
-                      const currentY = moveEvent.touches[0].clientY;
-                      const diff = Math.max(0, currentY - startY);
-                      currentPullProgress = Math.min(diff * 0.6, 60);
-                      
-                      setPullProgress(currentPullProgress);
-                      
-                      if (currentPullProgress > 0) {
-                        setIsPulling(true);
-                      }
-                    };
-                    
-                    const handleTouchEnd = () => {
-                      if (currentPullProgress > 50 && scrollTop === 0 && !isRefreshing) {
-                        handleRefresh();
-                      }
-                      
-                      setIsPulling(false);
-                      setPullProgress(0);
-                      document.removeEventListener('touchmove', handleTouchMove);
-                      document.removeEventListener('touchend', handleTouchEnd);
-                    };
-                    
-                    document.addEventListener('touchmove', handleTouchMove, { passive: true });
-                    document.addEventListener('touchend', handleTouchEnd, { once: true });
-                  }}
-                >
-                  {filteredLoans.map((loan) => (
-                    <LoanCard key={loan.id} loan={loan} />
-                  ))}
-                </div>
-              </div>
-            )}
+                )}
+              </TabsContent>
+              
+              <TabsContent value="completed" className="space-y-4">
+                {completedLoans.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-3 mb-4">
+                      <Search size={20} className="text-gray-500" />
+                    </div>
+                    <h3 className="text-lg font-medium mb-1">No completed loans found</h3>
+                    <p className="text-sm text-gray-500 max-w-md">
+                      {searchQuery ? "No completed loans match your search criteria." : "You don't have any completed loans yet."}
+                    </p>
+                  </div>
+                ) : (
+                  <div 
+                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"
+                  >
+                    {completedLoans.map((loan) => (
+                      <LoanCard key={loan.id} loan={loan} />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
         )}
       </main>

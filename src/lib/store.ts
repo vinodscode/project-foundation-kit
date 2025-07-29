@@ -37,6 +37,8 @@ export type LoanStoreState = {
   setFilters: (filters: Partial<FilterOption>) => void;
   clearFilters: () => void;
   getFilteredLoans: () => Loan[];
+  getActiveLoans: () => Loan[];
+  getCompletedLoans: () => Loan[];
 };
 
 // Helper function to transform database loan to app loan format
@@ -281,14 +283,19 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
   
   getTotalLent: () => {
     const { loans } = get();
-    return loans.reduce((total, loan) => total + loan.amount, 0);
+    return loans.reduce((total, loan) => {
+      const remaining = get().getRemainingPrincipal(loan.id);
+      return total + remaining;
+    }, 0);
   },
   
   getMonthlyInterest: () => {
     const { loans } = get();
     return loans.reduce((total, loan) => {
+      const remaining = get().getRemainingPrincipal(loan.id);
+      if (remaining <= 0) return total; // Don't calculate interest for completed loans
       const monthlyInterestRate = loan.interestRate / 100 / 12;
-      return total + (loan.amount * monthlyInterestRate);
+      return total + (remaining * monthlyInterestRate);
     }, 0);
   },
   
@@ -448,6 +455,16 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
     });
     
     return filteredLoans;
+  },
+
+  getActiveLoans: () => {
+    const { loans } = get();
+    return loans.filter(loan => get().getRemainingPrincipal(loan.id) > 0);
+  },
+
+  getCompletedLoans: () => {
+    const { loans } = get();
+    return loans.filter(loan => get().getRemainingPrincipal(loan.id) <= 0);
   },
 }));
 
