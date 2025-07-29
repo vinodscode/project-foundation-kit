@@ -24,6 +24,7 @@ interface Reminder {
 const NotificationDropdown = () => {
   const loans = useLoanStore((state) => state.loans);
   const addPayment = useLoanStore((state) => state.addPayment);
+  const getRemainingPrincipal = useLoanStore((state) => state.getRemainingPrincipal);
   
   // Calculate interest reminders - assuming monthly interest due
   const reminders = useMemo(() => {
@@ -34,8 +35,13 @@ const NotificationDropdown = () => {
     const allReminders: Reminder[] = [];
     
     loans.forEach((loan) => {
-      // Calculate monthly interest amount
-      const monthlyInterest = (loan.amount * loan.interestRate) / 100 / 12;
+      // Skip completed loans (loans with zero remaining balance)
+      const remainingBalance = getRemainingPrincipal(loan.id);
+      if (remainingBalance <= 0) {
+        return;
+      }
+      // Calculate monthly interest amount based on remaining balance
+      const monthlyInterest = (remainingBalance * loan.interestRate) / 100 / 12;
 
       // Ensure startDate is a Date object
       const startDate = loan.startDate instanceof Date ? loan.startDate : new Date(loan.startDate);
