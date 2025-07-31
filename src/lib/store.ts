@@ -9,6 +9,13 @@ export type FilterOption = {
   amountRange: { min: number; max: number } | null;
 };
 
+export interface MOIEntry {
+  id: string;
+  amount: number;
+  date: Date;
+  name: string;
+}
+
 export type LoanStoreState = {
   loans: Loan[];
   isLoading: boolean;
@@ -17,6 +24,9 @@ export type LoanStoreState = {
   sortBy: SortOption;
   sortOrder: 'asc' | 'desc';
   filters: FilterOption;
+  // MOI Mode
+  moiMode: boolean;
+  moiEntries: MOIEntry[];
   
   fetchLoans: () => Promise<void>;
   addLoan: (loan: Omit<Loan, 'id' | 'payments'>) => Promise<Loan>;
@@ -39,6 +49,11 @@ export type LoanStoreState = {
   getFilteredLoans: () => Loan[];
   getActiveLoans: () => Loan[];
   getCompletedLoans: () => Loan[];
+  // MOI Mode functions
+  setMoiMode: (enabled: boolean) => void;
+  addMoiEntry: (entry: Omit<MOIEntry, 'id'>) => void;
+  deleteMoiEntry: (entryId: string) => void;
+  getTotalMOI: () => number;
 };
 
 // Helper function to transform database loan to app loan format
@@ -73,6 +88,9 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
     loanType: [],
     amountRange: null,
   },
+  // MOI Mode
+  moiMode: false,
+  moiEntries: [],
   
   fetchLoans: async () => {
     set({ isLoading: true, error: null });
@@ -465,6 +483,32 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
   getCompletedLoans: () => {
     const { loans } = get();
     return loans.filter(loan => get().getRemainingPrincipal(loan.id) <= 0);
+  },
+
+  // MOI Mode functions
+  setMoiMode: (enabled) => {
+    set({ moiMode: enabled });
+  },
+
+  addMoiEntry: (entry) => {
+    const newEntry: MOIEntry = {
+      ...entry,
+      id: crypto.randomUUID()
+    };
+    set((state) => ({
+      moiEntries: [...state.moiEntries, newEntry]
+    }));
+  },
+
+  deleteMoiEntry: (entryId) => {
+    set((state) => ({
+      moiEntries: state.moiEntries.filter(entry => entry.id !== entryId)
+    }));
+  },
+
+  getTotalMOI: () => {
+    const { moiEntries } = get();
+    return moiEntries.reduce((total, entry) => total + entry.amount, 0);
   },
 }));
 

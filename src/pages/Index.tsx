@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { PlusCircle, Search, RefreshCw } from "lucide-react";
 import Header from "@/components/Header";
 import EmptyState from "@/components/EmptyState";
 import LoanCard from "@/components/LoanCard";
+import MOIDashboard from "@/components/MOIDashboard";
 import { useLoanStore } from "@/lib/store";
 import { Skeleton } from "@/components/ui/skeleton";
 import SearchBox from "@/components/SearchBox";
@@ -27,6 +30,10 @@ const Index = () => {
   const getFilteredLoans = useLoanStore((state) => state.getFilteredLoans);
   const getActiveLoans = useLoanStore((state) => state.getActiveLoans);
   const getCompletedLoans = useLoanStore((state) => state.getCompletedLoans);
+  
+  // MOI Mode
+  const moiMode = useLoanStore((state) => state.moiMode);
+  const setMoiMode = useLoanStore((state) => state.setMoiMode);
   
   useEffect(() => {
     console.log("Index: Fetching loans");
@@ -120,10 +127,29 @@ const Index = () => {
       />
       
       <main className="flex-1 pb-20 w-full">
-        {loans.length === 0 ? (
-          <EmptyState />
+        {/* MOI Mode Toggle */}
+        <div className="container px-4 sm:px-6 max-w-screen-2xl mx-auto pt-4">
+          <div className="flex items-center space-x-2 mb-4">
+            <Switch 
+              id="moi-mode" 
+              checked={moiMode} 
+              onCheckedChange={setMoiMode}
+            />
+            <Label htmlFor="moi-mode" className="text-sm font-medium">
+              MOI Mode
+            </Label>
+          </div>
+        </div>
+
+        {moiMode ? (
+          <div className="container px-4 sm:px-6 max-w-screen-2xl mx-auto">
+            <MOIDashboard />
+          </div>
         ) : (
-          <div className="container px-4 sm:px-6 max-w-screen-2xl mx-auto py-4">
+          loans.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div className="container px-4 sm:px-6 max-w-screen-2xl mx-auto py-4">
             <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
               <h2 className="text-xl font-medium">Your Loans</h2>
               
@@ -279,7 +305,8 @@ const Index = () => {
                 )}
               </TabsContent>
             </Tabs>
-          </div>
+            </div>
+          )
         )}
       </main>
     </div>
