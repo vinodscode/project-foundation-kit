@@ -33,7 +33,6 @@ const Index = () => {
   
   // MOI Mode
   const moiMode = useLoanStore((state) => state.moiMode);
-  const setMoiMode = useLoanStore((state) => state.setMoiMode);
   
   useEffect(() => {
     console.log("Index: Fetching loans");
@@ -127,24 +126,9 @@ const Index = () => {
       />
       
       <main className="flex-1 pb-20 w-full">
-        {/* MOI Mode Toggle */}
-        <div className="container px-4 sm:px-6 max-w-screen-2xl mx-auto pt-4">
-          <div className="flex items-center space-x-2 mb-4">
-            <Switch 
-              id="moi-mode" 
-              checked={moiMode} 
-              onCheckedChange={setMoiMode}
-            />
-            <Label htmlFor="moi-mode" className="text-sm font-medium">
-              MOI Mode
-            </Label>
-          </div>
-        </div>
 
         {moiMode ? (
-          <div className="container px-4 sm:px-6 max-w-screen-2xl mx-auto">
-            <MOIDashboard />
-          </div>
+          <MOIDashboard />
         ) : (
           loans.length === 0 ? (
             <EmptyState />

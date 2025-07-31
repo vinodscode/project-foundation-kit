@@ -14,6 +14,7 @@ export interface MOIEntry {
   amount: number;
   date: Date;
   name: string;
+  description?: string;
 }
 
 export type LoanStoreState = {

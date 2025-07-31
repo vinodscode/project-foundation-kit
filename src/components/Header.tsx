@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Settings, Calculator, Menu, LogOut, User } from "lucide-react";
-import { formatCurrency } from "@/lib/store";
+import { formatCurrency, useLoanStore } from "@/lib/store";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import Logo from "./Logo";
 import NotificationDropdown from "./NotificationDropdown";
@@ -22,6 +24,10 @@ const Header = ({ totalAmount, monthlyInterest }: HeaderProps) => {
   const isMobile = useIsMobile();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  
+  // MOI Mode
+  const moiMode = useLoanStore((state) => state.moiMode);
+  const setMoiMode = useLoanStore((state) => state.setMoiMode);
 
   const handleSignOut = async () => {
     try {
@@ -150,6 +156,15 @@ const Header = ({ totalAmount, monthlyInterest }: HeaderProps) => {
                         <p className="text-sm font-medium">{user?.email}</p>
                         <p className="text-xs text-muted-foreground">Account</p>
                       </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">MOI Mode</span>
+                      <Switch 
+                        id="moi-mode" 
+                        checked={moiMode} 
+                        onCheckedChange={setMoiMode}
+                      />
                     </div>
                     
                     <div className="flex items-center justify-between">
