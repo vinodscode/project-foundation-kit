@@ -10,7 +10,6 @@ import LoanCard from "@/components/LoanCard";
 
 import { useLoanStore } from "@/lib/store";
 import { Skeleton } from "@/components/ui/skeleton";
-import SearchBox from "@/components/SearchBox";
 import LoanFilters from "@/components/LoanFilters";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loan } from "@/lib/types";
