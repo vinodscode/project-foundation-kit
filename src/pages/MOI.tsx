@@ -199,7 +199,7 @@ const MOI = () => {
                     </div>
                     <h2 className="text-xs sm:text-sm text-green-800 dark:text-green-300 uppercase tracking-wider font-medium">Total MOI</h2>
                   </div>
-                  <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{formatCurrency(getTotalMOI())}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalMOI)}</p>
                 </div>
               </div>
             </div>
