@@ -100,7 +100,16 @@ const Header = ({ totalAmount, monthlyInterest }: HeaderProps) => {
                       <Calculator size={16} />
                       <span>Calculator</span>
                     </Button>
-                    
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate('/moi')}
+                      className="flex items-center justify-start gap-2 w-full"
+                    >
+                      <span>MOI Dashboard</span>
+                    </Button>
+
                     <div className="flex items-center justify-between border-t pt-4">
                       <span className="text-sm font-medium">Theme</span>
                       <ThemeToggle />
