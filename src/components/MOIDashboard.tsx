@@ -157,14 +157,14 @@ const MOIDashboard = () => {
               No entries yet. Add your first MOI entry above.
             </div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-border">
+            <div className="overflow-x-auto rounded-lg border border-border">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead className="font-semibold">Date</TableHead>
-                    <TableHead className="font-semibold">Name</TableHead>
-                    <TableHead className="font-semibold">Description</TableHead>
-                    <TableHead className="text-right font-semibold">Amount</TableHead>
+                    <TableHead className="font-semibold min-w-[100px]">Date</TableHead>
+                    <TableHead className="font-semibold min-w-[120px]">Name</TableHead>
+                    <TableHead className="font-semibold min-w-[150px] hidden sm:table-cell">Description</TableHead>
+                    <TableHead className="text-right font-semibold min-w-[100px]">Amount</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
