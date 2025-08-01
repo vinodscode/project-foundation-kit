@@ -134,15 +134,16 @@ const MOIDashboard = () => {
                 </div>
               </div>
               
-              <div className="flex gap-2">
-                <Button type="submit">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button type="submit" className="flex-1 sm:flex-none">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Entry
                 </Button>
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => setShowForm(false)}
+                  className="flex-1 sm:flex-none"
                 >
                   Cancel
                 </Button>
