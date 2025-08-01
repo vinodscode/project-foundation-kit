@@ -17,6 +17,11 @@ const MOI = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const getTotalMOI = useLoanStore((state) => state.getTotalMOI);
+  const moiEntries = useLoanStore((state) => state.moiEntries);
+
+  // Debug: Log MOI calculation
+  const totalMOI = getTotalMOI();
+  console.log('MOI Debug:', { moiEntries, totalMOI });
 
   const handleSignOut = async () => {
     try {
