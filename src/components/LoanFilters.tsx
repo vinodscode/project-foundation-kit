@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Filter, SortAsc, SortDesc, X } from "lucide-react";
 import { useLoanStore, SortOption } from "@/lib/store";
+import SearchBox from "./SearchBox";
 
 const LoanFilters = () => {
   const [amountRangeDialog, setAmountRangeDialog] = useState(false);
