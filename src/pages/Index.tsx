@@ -133,9 +133,6 @@ const Index = () => {
               <h2 className="text-xl font-medium">Your Loans</h2>
               
               <div className="flex flex-col sm:flex-row gap-2 flex-1 lg:ml-4">
-                <div className="flex-1">
-                  <SearchBox />
-                </div>
                 <div className="flex items-center gap-2">
                   <LoanFilters />
                   <Button
