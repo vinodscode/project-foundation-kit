@@ -49,11 +49,11 @@ const MOIDashboard = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold mb-2">MOI Dashboard</h1>
-        <p className="text-muted-foreground">Manage your MOI entries</p>
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">MOI Dashboard</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Manage your MOI entries</p>
       </div>
 
       {/* Add Entry Section */}
