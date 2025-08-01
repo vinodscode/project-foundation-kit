@@ -496,15 +496,35 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
       ...entry,
       id: crypto.randomUUID()
     };
-    set((state) => ({
-      moiEntries: [...state.moiEntries, newEntry]
-    }));
+    set((state) => {
+      const updatedEntries = [...state.moiEntries, newEntry];
+      // Persist to localStorage
+      try {
+        localStorage.setItem('moiEntries', JSON.stringify(updatedEntries.map(e => ({
+          ...e,
+          date: e.date.toISOString()
+        }))));
+      } catch (error) {
+        console.error('Failed to save MOI entries to localStorage:', error);
+      }
+      return { moiEntries: updatedEntries };
+    });
   },
 
   deleteMoiEntry: (entryId) => {
-    set((state) => ({
-      moiEntries: state.moiEntries.filter(entry => entry.id !== entryId)
-    }));
+    set((state) => {
+      const updatedEntries = state.moiEntries.filter(entry => entry.id !== entryId);
+      // Persist to localStorage
+      try {
+        localStorage.setItem('moiEntries', JSON.stringify(updatedEntries.map(e => ({
+          ...e,
+          date: e.date.toISOString()
+        }))));
+      } catch (error) {
+        console.error('Failed to save MOI entries to localStorage:', error);
+      }
+      return { moiEntries: updatedEntries };
+    });
   },
 
   getTotalMOI: () => {
