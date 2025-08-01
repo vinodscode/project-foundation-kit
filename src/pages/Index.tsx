@@ -129,8 +129,19 @@ const Index = () => {
         ) : (
             <div className="container px-4 sm:px-6 max-w-screen-2xl mx-auto py-4">
             <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
-              <h2 className="text-xl font-medium">Your Loans</h2>
-              
+              <div className="flex flex-row">
+                <h2 className="text-xl font-medium">Your Loans</h2>
+                <Button
+                  onClick={() => navigate("/add-loan")}
+                  className="gap-2 sm:ml-auto"
+                  size="sm"
+                  variant="outline"
+                >
+                  <PlusCircle size={16} />
+                  <span>Add Loan</span>
+                </Button>
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-2 flex-1 lg:ml-4">
                 <div className="flex items-center gap-2">
                   <LoanFilters />
@@ -143,15 +154,6 @@ const Index = () => {
                   >
                     <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
                     <span className="hidden sm:inline">Refresh</span>
-                  </Button>
-                  <Button
-                    onClick={() => navigate("/add-loan")}
-                    className="gap-2"
-                    size="sm"
-                    variant="outline"
-                  >
-                    <PlusCircle size={16} />
-                    <span>Add Loan</span>
                   </Button>
                 </div>
               </div>
