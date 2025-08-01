@@ -177,14 +177,23 @@ const MOIDashboard = () => {
                         className="border-b border-border hover:bg-muted/30 transition-colors"
                       >
                         <TableCell className="font-medium">
-                          {format(entry.date, "MMM dd, yyyy")}
+                          <div className="text-sm sm:text-base">
+                            {format(entry.date, "MMM dd, yyyy")}
+                          </div>
                         </TableCell>
-                        <TableCell className="font-medium">{entry.name}</TableCell>
-                        <TableCell className="text-muted-foreground max-w-xs truncate">
+                        <TableCell className="font-medium">
+                          <div className="text-sm sm:text-base">{entry.name}</div>
+                          <div className="text-xs text-muted-foreground sm:hidden">
+                            {entry.description || "No description"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground max-w-xs truncate hidden sm:table-cell">
                           {entry.description || "-"}
                         </TableCell>
                         <TableCell className="text-right font-mono font-semibold">
-                          {formatCurrency(entry.amount)}
+                          <div className="text-sm sm:text-base">
+                            {formatCurrency(entry.amount)}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Button
