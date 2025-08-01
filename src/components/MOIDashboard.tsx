@@ -58,7 +58,7 @@ const MOIDashboard = () => {
         </div>
 
         {/* Total MOI Summary Card */}
-        <Card>
+        <Card className="bg-moi-success border-moi-success">
           <CardHeader>
             <CardTitle>Total MOI</CardTitle>
           </CardHeader>
