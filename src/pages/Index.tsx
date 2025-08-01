@@ -129,11 +129,11 @@ const Index = () => {
         ) : (
             <div className="container px-4 sm:px-6 max-w-screen-2xl mx-auto py-4">
             <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
-              <div className="flex flex-row">
+              <div className="flex flex-row justify-center items-center sm:justify-start sm:items-start">
                 <h2 className="text-xl font-medium">Your Loans</h2>
                 <Button
                   onClick={() => navigate("/add-loan")}
-                  className="gap-2 sm:ml-auto"
+                  className="gap-2 ml-auto justify-end items-center sm:ml-auto sm:justify-center sm:items-center"
                   size="sm"
                   variant="outline"
                 >
