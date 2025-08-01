@@ -12,6 +12,7 @@ import EditLoan from "./pages/EditLoan";
 import NotFound from "./pages/NotFound";
 import Calculator from "./pages/Calculator";
 import Auth from "./pages/Auth";
+import MOI from "./pages/MOI";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useEffect } from "react";
@@ -48,6 +49,7 @@ const App = () => {
                 <Route path="/loans/:id" element={<ProtectedRoute><LoanDetails /></ProtectedRoute>} />
                 <Route path="/loans/:id/edit" element={<ProtectedRoute><EditLoan /></ProtectedRoute>} />
                 <Route path="/calculator" element={<ProtectedRoute><Calculator /></ProtectedRoute>} />
+                <Route path="/moi" element={<ProtectedRoute><MOI /></ProtectedRoute>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

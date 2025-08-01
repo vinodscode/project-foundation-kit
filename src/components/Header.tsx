@@ -158,14 +158,14 @@ const Header = ({ totalAmount, monthlyInterest }: HeaderProps) => {
                       </div>
                     </div>
                     
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">MOI Mode</span>
-                      <Switch 
-                        id="moi-mode" 
-                        checked={moiMode} 
-                        onCheckedChange={setMoiMode}
-                      />
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate('/moi')}
+                      className="flex items-center justify-center gap-2 w-full"
+                    >
+                      <span>MOI Dashboard</span>
+                    </Button>
                     
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Theme</span>

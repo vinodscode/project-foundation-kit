@@ -7,7 +7,7 @@ import { PlusCircle, Search, RefreshCw } from "lucide-react";
 import Header from "@/components/Header";
 import EmptyState from "@/components/EmptyState";
 import LoanCard from "@/components/LoanCard";
-import MOIDashboard from "@/components/MOIDashboard";
+
 import { useLoanStore } from "@/lib/store";
 import { Skeleton } from "@/components/ui/skeleton";
 import SearchBox from "@/components/SearchBox";
@@ -31,8 +31,6 @@ const Index = () => {
   const getActiveLoans = useLoanStore((state) => state.getActiveLoans);
   const getCompletedLoans = useLoanStore((state) => state.getCompletedLoans);
   
-  // MOI Mode
-  const moiMode = useLoanStore((state) => state.moiMode);
   
   useEffect(() => {
     console.log("Index: Fetching loans");
@@ -127,12 +125,9 @@ const Index = () => {
       
       <main className="flex-1 pb-20 w-full">
 
-        {moiMode ? (
-          <MOIDashboard />
+        {loans.length === 0 ? (
+          <EmptyState />
         ) : (
-          loans.length === 0 ? (
-            <EmptyState />
-          ) : (
             <div className="container px-4 sm:px-6 max-w-screen-2xl mx-auto py-4">
             <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
               <h2 className="text-xl font-medium">Your Loans</h2>
@@ -291,7 +286,7 @@ const Index = () => {
             </Tabs>
             </div>
           )
-        )}
+        }
       </main>
     </div>
   );

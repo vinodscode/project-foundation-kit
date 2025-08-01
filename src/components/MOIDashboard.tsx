@@ -58,16 +58,20 @@ const MOIDashboard = () => {
         </div>
 
         {/* Total MOI Summary Card */}
-        <Card className="bg-moi-success border-moi-success">
-          <CardHeader>
-            <CardTitle>Total MOI</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-primary">
-              {formatCurrency(getTotalMOI())}
+        <div className="bg-gradient-to-br from-green-50 to-emerald-100 dark:from-gray-800 dark:to-gray-900 p-4 md:p-5 rounded-xl shadow-sm relative overflow-hidden border border-green-100 dark:border-gray-700">
+          <div className="absolute -right-6 -top-6 w-24 h-24 bg-green-200/30 dark:bg-green-700/20 rounded-full blur-xl"></div>
+          <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-emerald-200/30 dark:bg-emerald-700/20 rounded-full blur-xl"></div>
+          
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-6 h-6 flex items-center justify-center rounded-full bg-green-500/20 dark:bg-green-500/30" style={{paddingBottom: '5px'}}>
+                <span className="text-green-700 dark:text-green-300 text-xs font-bold">ரு</span>
+              </div>
+              <h2 className="text-xs sm:text-sm text-green-800 dark:text-green-300 uppercase tracking-wider font-medium">Total MOI</h2>
             </div>
-          </CardContent>
-        </Card>
+            <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{formatCurrency(getTotalMOI())}</p>
+          </div>
+        </div>
 
         {/* Add Entry Section */}
         <Card>
