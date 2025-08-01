@@ -78,6 +78,23 @@ const transformDbLoanToAppLoan = (dbLoan: any, payments: any[] = []): Loan => {
   };
 };
 
+// Initialize MOI entries from localStorage
+const initializeMOIEntries = (): MOIEntry[] => {
+  try {
+    const saved = localStorage.getItem('moiEntries');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return parsed.map((entry: any) => ({
+        ...entry,
+        date: new Date(entry.date)
+      }));
+    }
+  } catch (error) {
+    console.error('Failed to load MOI entries from localStorage:', error);
+  }
+  return [];
+};
+
 export const useLoanStore = create<LoanStoreState>((set, get) => ({
   loans: [],
   isLoading: false,
@@ -91,7 +108,7 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
   },
   // MOI Mode
   moiMode: false,
-  moiEntries: [],
+  moiEntries: initializeMOIEntries(),
   
   fetchLoans: async () => {
     set({ isLoading: true, error: null });
