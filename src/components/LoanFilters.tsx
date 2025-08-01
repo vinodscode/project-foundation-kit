@@ -82,6 +82,9 @@ const LoanFilters = () => {
 
   return (
     <div className="flex items-center gap-2">
+      {/* Search Box */}
+      <SearchBox />
+
       {/* Sort Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
