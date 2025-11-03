@@ -26,6 +26,12 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
+  const url = new URL(req.url);
+  const sameOrigin = url.origin === self.location.origin;
+
+  // Bypass cross-origin requests (e.g., Supabase)
+  if (!sameOrigin) return;
+
   // SPA navigation fallback: serve app shell for navigations
   if (req.mode === 'navigate') {
     event.respondWith(
