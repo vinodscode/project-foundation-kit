@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lendly-cache-v2';
+const CACHE_NAME = 'lendly-cache-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -17,9 +17,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(
-        keys.map((key) => (key !== CACHE_NAME ? caches.delete(key) : Promise.resolve()))
-      )
+      Promise.all(keys.map((key) => (key !== CACHE_NAME ? caches.delete(key) : Promise.resolve())))
     ).then(() => self.clients.claim())
   );
 });
@@ -28,20 +26,31 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
+  // SPA navigation fallback: serve app shell for navigations
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req)
+        .then((res) => (res.ok ? res : caches.match('/index.html')))
+        .catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Static assets: cache-first, then network with background update
   event.respondWith(
     caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req)
+      const fetchPromise = fetch(req)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            if (req.url.startsWith(self.location.origin)) {
-              cache.put(req, copy);
-            }
-          });
+          // Only cache same-origin responses
+          if (req.url.startsWith(self.location.origin) && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+          }
           return response;
         })
         .catch(() => cached);
+
+      return cached || fetchPromise;
     })
   );
 });
