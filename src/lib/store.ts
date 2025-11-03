@@ -28,13 +28,14 @@ export type LoanStoreState = {
   // MOI Mode
   moiMode: boolean;
   moiEntries: MOIEntry[];
-  
+
   fetchLoans: () => Promise<void>;
   addLoan: (loan: Omit<Loan, 'id' | 'payments'>) => Promise<Loan>;
   updateLoan: (loanId: string, loanData: Partial<Loan>) => Promise<void>;
   deleteLoan: (loanId: string) => Promise<void>;
   addPayment: (loanId: string, payment: Omit<Payment, 'id'>) => Promise<void>;
   deletePayment: (loanId: string, paymentId: string) => Promise<void>;
+  addTopUp: (loanId: string, topup: { amount: number; date: Date; notes?: string }) => Promise<void>;
   getLoanById: (loanId: string) => Loan | undefined;
   getTotalLent: () => number;
   getMonthlyInterest: () => number;
@@ -283,6 +284,36 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
     }
   },
   
+  addTopUp: async (loanId, topup) => {
+    set({ isLoading: true, error: null });
+    try {
+      const { loans } = get();
+      const loan = loans.find(l => l.id === loanId);
+      if (!loan) throw new Error('Loan not found');
+      const newAmount = loan.amount + topup.amount;
+
+      // Optionally append a note entry recording the top-up
+      const noteLine = `Top-up: +${topup.amount} on ${topup.date.toISOString().split('T')[0]}${topup.notes ? ` - ${topup.notes}` : ''}`;
+      const updatedNotes = loan.notes ? `${loan.notes}\n${noteLine}` : noteLine;
+
+      const { error } = await supabase
+        .from('loans')
+        .update({ amount: newAmount, notes: updatedNotes })
+        .eq('id', loanId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        loans: state.loans.map((l) => (l.id === loanId ? { ...l, amount: newAmount, notes: updatedNotes } : l)),
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error('Error adding top-up:', error);
+      set({ error: error as Error, isLoading: false });
+      throw error;
+    }
+  },
+
   deletePayment: async (loanId, paymentId) => {
     set({ isLoading: true, error: null });
     try {
