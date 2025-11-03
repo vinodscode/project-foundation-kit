@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Settings, Calculator, Menu, LogOut, User } from "lucide-react";
+import PWAInstall from "./PWAInstall";
 import { formatCurrency, useLoanStore } from "@/lib/store";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Switch } from "@/components/ui/switch";
@@ -66,6 +67,7 @@ const Header = ({ totalAmount, monthlyInterest }: HeaderProps) => {
               </Button>
 
               <NotificationDropdown />
+              <PWAInstall />
               
               <Sheet>
                 <SheetTrigger asChild>
@@ -141,6 +143,7 @@ const Header = ({ totalAmount, monthlyInterest }: HeaderProps) => {
               </Button>
 
               <NotificationDropdown />
+              <PWAInstall />
               
               <Sheet>
                 <SheetTrigger asChild>
