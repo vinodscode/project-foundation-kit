@@ -1,9 +1,8 @@
-const CACHE_NAME = 'lendly-cache-v1';
+const CACHE_NAME = 'lendly-cache-v2';
 const ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json',
-  '/logo.png',
+  '/manifest.webmanifest',
   '/favicon.ico'
 ];
 
