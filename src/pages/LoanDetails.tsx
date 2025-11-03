@@ -7,6 +7,7 @@ import { ArrowLeft, CalendarIcon, Edit, PlusCircle, Trash2, CreditCard, PiggyBan
 import { format } from "date-fns";
 import { Payment } from "@/lib/types";
 import PaymentDialog from "@/components/PaymentDialog";
+import TopUpDialog from "@/components/TopUpDialog";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -29,10 +30,12 @@ const LoanDetails = () => {
   const isMobile = useIsMobile();
   
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isTopUpDialogOpen, setIsTopUpDialogOpen] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
   
   const loans = useLoanStore((state) => state.loans);
   const addPayment = useLoanStore((state) => state.addPayment);
+  const addTopUp = useLoanStore((state) => state.addTopUp);
   const deletePayment = useLoanStore((state) => state.deletePayment);
   const getTotalInterestReceived = useLoanStore((state) => state.getTotalInterestReceived);
   const getTotalPrincipalPaid = useLoanStore((state) => state.getTotalPrincipalPaid);
@@ -94,7 +97,21 @@ const LoanDetails = () => {
       });
     }
   };
-  
+
+  const handleAddTopUp = async (amount: number, date: Date, notes?: string) => {
+    try {
+      await addTopUp(loan.id, { amount, date, notes });
+      setLoanDetails((prev) => ({
+        ...prev,
+        remainingPrincipal: prev.remainingPrincipal + amount,
+      }));
+      toast({ title: 'Top-up added', description: `Increased principal by ${formatCurrency(amount)}` });
+    } catch (error) {
+      console.error('Error adding top-up:', error);
+      toast({ title: 'Failed to add top-up', description: 'Please try again', variant: 'destructive' });
+    }
+  };
+
   const handleDeletePayment = async (paymentId: string) => {
     try {
       const paymentToRemove = loan.payments.find(p => p.id === paymentId);
@@ -236,14 +253,25 @@ const LoanDetails = () => {
               Record principal and interest payments
             </p>
           </div>
-          <Button 
-            onClick={() => setIsPaymentDialogOpen(true)} 
-            className="gap-2"
-            size={isMobile ? "sm" : "default"}
-          >
-            <PlusCircle size={isMobile ? 14 : 16} />
-            <span>{isMobile ? "Add" : "Add Payment"}</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setIsPaymentDialogOpen(true)}
+              className="gap-2"
+              size={isMobile ? "sm" : "default"}
+            >
+              <PlusCircle size={isMobile ? 14 : 16} />
+              <span>{isMobile ? "Add" : "Add Payment"}</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsTopUpDialogOpen(true)}
+              className="gap-2"
+              size={isMobile ? "sm" : "default"}
+            >
+              <PlusCircle size={isMobile ? 14 : 16} />
+              <span>{isMobile ? "Top-up" : "Add Top-up"}</span>
+            </Button>
+          </div>
         </div>
         
         {sortedPayments.length === 0 ? (
@@ -310,6 +338,12 @@ const LoanDetails = () => {
         onOpenChange={setIsPaymentDialogOpen}
         onSubmit={handleAddPayment}
         loanAmount={loanDetails.remainingPrincipal}
+      />
+
+      <TopUpDialog
+        open={isTopUpDialogOpen}
+        onOpenChange={setIsTopUpDialogOpen}
+        onSubmit={handleAddTopUp}
       />
       
       <AlertDialog open={!!paymentToDelete} onOpenChange={() => setPaymentToDelete(null)}>
