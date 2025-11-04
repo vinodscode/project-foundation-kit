@@ -34,6 +34,7 @@ const LoanDetails = () => {
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
   
   const loans = useLoanStore((state) => state.loans);
+  const fetchLoans = useLoanStore((state) => state.fetchLoans);
   const addPayment = useLoanStore((state) => state.addPayment);
   const addTopUp = useLoanStore((state) => state.addTopUp);
   const deletePayment = useLoanStore((state) => state.deletePayment);
@@ -49,6 +50,10 @@ const LoanDetails = () => {
     remainingPrincipal: 0
   });
   
+  useEffect(() => {
+    fetchLoans().catch(() => {});
+  }, [fetchLoans]);
+
   useEffect(() => {
     if (loan?.id) {
       setLoanDetails({
