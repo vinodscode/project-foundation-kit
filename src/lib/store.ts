@@ -74,7 +74,7 @@ const transformDbLoanToAppLoan = (dbLoan: any, payments: any[] = []): Loan => {
       amount: parseFloat(payment.amount),
       date: new Date(payment.payment_date),
       notes: payment.notes,
-      type: payment.payment_type as 'principal' | 'interest'
+      type: payment.payment_type as 'principal' | 'interest' | 'topup'
     }))
   };
 };
@@ -262,7 +262,7 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
         amount: Number(data.amount),
         date: new Date(data.payment_date),
         notes: data.notes,
-        type: data.payment_type as 'principal' | 'interest'
+        type: data.payment_type as 'principal' | 'interest' | 'topup'
       };
 
       set((state) => ({
@@ -292,19 +292,41 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
       if (!loan) throw new Error('Loan not found');
       const newAmount = loan.amount + topup.amount;
 
-      // Optionally append a note entry recording the top-up
       const noteLine = `Top-up: +${topup.amount} on ${topup.date.toISOString().split('T')[0]}${topup.notes ? ` - ${topup.notes}` : ''}`;
       const updatedNotes = loan.notes ? `${loan.notes}\n${noteLine}` : noteLine;
 
-      const { error } = await supabase
+      // Update loan principal
+      const { error: loanError } = await supabase
         .from('loans')
         .update({ amount: newAmount, notes: updatedNotes })
         .eq('id', loanId);
+      if (loanError) throw loanError;
 
-      if (error) throw error;
+      // Create a payment record marked as topup
+      const { data: paymentRow, error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          loan_id: loanId,
+          amount: topup.amount,
+          payment_date: topup.date.toISOString(),
+          notes: topup.notes ? `${topup.notes} [TOPUP]` : '[TOPUP] Top-up added',
+          payment_type: 'topup',
+          user_id: (await supabase.auth.getUser()).data.user?.id
+        })
+        .select()
+        .single();
+      if (paymentError) throw paymentError;
+
+      const newPayment: Payment = {
+        id: paymentRow.id,
+        amount: Number(paymentRow.amount),
+        date: new Date(paymentRow.payment_date),
+        notes: paymentRow.notes,
+        type: 'topup'
+      };
 
       set((state) => ({
-        loans: state.loans.map((l) => (l.id === loanId ? { ...l, amount: newAmount, notes: updatedNotes } : l)),
+        loans: state.loans.map((l) => (l.id === loanId ? { ...l, amount: newAmount, notes: updatedNotes, payments: [...l.payments, newPayment] } : l)),
         isLoading: false,
       }));
     } catch (error) {
@@ -317,24 +339,39 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
   deletePayment: async (loanId, paymentId) => {
     set({ isLoading: true, error: null });
     try {
+      const { loans } = get();
+      const loan = loans.find(l => l.id === loanId);
+      const payment = loan?.payments.find(p => p.id === paymentId);
+
       const { error } = await supabase
         .from('payments')
         .delete()
         .eq('id', paymentId);
-
       if (error) throw error;
 
+      // If deleting a top-up, also reduce the loan principal
+      if (loan && payment && payment.type === 'topup') {
+        const newAmount = Math.max(0, loan.amount - payment.amount);
+        const { error: loanErr } = await supabase
+          .from('loans')
+          .update({ amount: newAmount })
+          .eq('id', loanId);
+        if (loanErr) throw loanErr;
+
+        set((state) => ({
+          loans: state.loans.map((l) =>
+            l.id === loanId
+              ? { ...l, amount: newAmount, payments: l.payments.filter(p => p.id !== paymentId) }
+              : l
+          ),
+          isLoading: false,
+        }));
+        return;
+      }
+
       set((state) => ({
-        loans: state.loans.map((loan) => {
-          if (loan.id === loanId) {
-            return {
-              ...loan,
-              payments: loan.payments.filter(p => p.id !== paymentId)
-            };
-          }
-          return loan;
-        }),
-        isLoading: false
+        loans: state.loans.map((l) => (l.id === loanId ? { ...l, payments: l.payments.filter(p => p.id !== paymentId) } : l)),
+        isLoading: false,
       }));
     } catch (error) {
       console.error('Error deleting payment:', error);
