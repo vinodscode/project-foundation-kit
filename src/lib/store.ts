@@ -60,6 +60,42 @@ export type LoanStoreState = {
 
 // Helper function to transform database loan to app loan format
 const transformDbLoanToAppLoan = (dbLoan: any, payments: any[] = []): Loan => {
+  const mappedPayments: Payment[] = payments.map(payment => {
+    const rawType = payment.payment_type as 'principal' | 'interest';
+    const notes: string | undefined = payment.notes || undefined;
+    const isTopUp = typeof notes === 'string' && notes.includes('[TOPUP]');
+    return {
+      id: payment.id,
+      amount: parseFloat(payment.amount),
+      date: new Date(payment.payment_date),
+      notes,
+      type: isTopUp ? 'topup' : rawType,
+    } as Payment;
+  });
+
+  const syntheticTopups: Payment[] = [];
+  if (dbLoan.notes && typeof dbLoan.notes === 'string') {
+    const lines = dbLoan.notes.split(/\r?\n/);
+    lines.forEach((line: string, idx: number) => {
+      const m = line.match(/Top-up:\s*\+?([0-9]+(?:\.[0-9]+)?)\s*on\s*([0-9]{4}-[0-9]{2}-[0-9]{2})(?:\s*-\s*(.*))?/i);
+      if (m) {
+        const amount = parseFloat(m[1]);
+        const iso = m[2];
+        const noteTail = m[3];
+        const exists = mappedPayments.some(p => p.type === 'topup' && Math.abs(p.amount - amount) < 0.001 && p.date.toISOString().slice(0,10) === iso);
+        if (!exists) {
+          syntheticTopups.push({
+            id: `synthetic-topup-${dbLoan.id}-${idx}`,
+            amount,
+            date: new Date(iso),
+            notes: noteTail ? `${noteTail} [TOPUP]` : '[TOPUP] Parsed from notes',
+            type: 'topup',
+          });
+        }
+      }
+    });
+  }
+
   return {
     id: dbLoan.id,
     borrowerName: dbLoan.borrower_name,
@@ -69,18 +105,7 @@ const transformDbLoanToAppLoan = (dbLoan: any, payments: any[] = []): Loan => {
     notes: dbLoan.notes,
     loanType: dbLoan.loan_type as 'Gold' | 'Bond',
     goldGrams: dbLoan.gold_grams ? parseFloat(dbLoan.gold_grams) : undefined,
-    payments: payments.map(payment => {
-      const rawType = payment.payment_type as 'principal' | 'interest';
-      const notes: string | undefined = payment.notes || undefined;
-      const isTopUp = typeof notes === 'string' && notes.includes('[TOPUP]');
-      return {
-        id: payment.id,
-        amount: parseFloat(payment.amount),
-        date: new Date(payment.payment_date),
-        notes,
-        type: isTopUp ? 'topup' : rawType,
-      } as Payment;
-    })
+    payments: [...mappedPayments, ...syntheticTopups],
   };
 };
 
