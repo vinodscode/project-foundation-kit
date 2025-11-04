@@ -108,7 +108,8 @@ const LoanDetails = () => {
       toast({ title: 'Top-up added', description: `Increased principal by ${formatCurrency(amount)}` });
     } catch (error) {
       console.error('Error adding top-up:', error);
-      toast({ title: 'Failed to add top-up', description: 'Please try again', variant: 'destructive' });
+      const msg = (error as any)?.message || 'Please try again';
+      toast({ title: 'Failed to add top-up', description: msg, variant: 'destructive' });
     }
   };
 
