@@ -69,13 +69,18 @@ const transformDbLoanToAppLoan = (dbLoan: any, payments: any[] = []): Loan => {
     notes: dbLoan.notes,
     loanType: dbLoan.loan_type as 'Gold' | 'Bond',
     goldGrams: dbLoan.gold_grams ? parseFloat(dbLoan.gold_grams) : undefined,
-    payments: payments.map(payment => ({
-      id: payment.id,
-      amount: parseFloat(payment.amount),
-      date: new Date(payment.payment_date),
-      notes: payment.notes,
-      type: payment.payment_type as 'principal' | 'interest' | 'topup'
-    }))
+    payments: payments.map(payment => {
+      const rawType = payment.payment_type as 'principal' | 'interest';
+      const notes: string | undefined = payment.notes || undefined;
+      const isTopUp = typeof notes === 'string' && notes.includes('[TOPUP]');
+      return {
+        id: payment.id,
+        amount: parseFloat(payment.amount),
+        date: new Date(payment.payment_date),
+        notes,
+        type: isTopUp ? 'topup' : rawType,
+      } as Payment;
+    })
   };
 };
 
@@ -310,7 +315,7 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
           amount: topup.amount,
           payment_date: topup.date.toISOString(),
           notes: topup.notes ? `${topup.notes} [TOPUP]` : '[TOPUP] Top-up added',
-          payment_type: 'topup',
+          payment_type: 'principal',
           user_id: (await supabase.auth.getUser()).data.user?.id
         })
         .select()
