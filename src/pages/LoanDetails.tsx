@@ -34,6 +34,7 @@ const LoanDetails = () => {
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
   
   const loans = useLoanStore((state) => state.loans);
+  const isLoading = useLoanStore((state) => state.isLoading);
   const fetchLoans = useLoanStore((state) => state.fetchLoans);
   const addPayment = useLoanStore((state) => state.addPayment);
   const addTopUp = useLoanStore((state) => state.addTopUp);
@@ -65,6 +66,13 @@ const LoanDetails = () => {
   }, [loan, loans, getTotalInterestReceived, getTotalPrincipalPaid, getRemainingPrincipal]);
   
   if (!loan) {
+    if (isLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
