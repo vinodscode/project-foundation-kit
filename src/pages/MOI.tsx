@@ -17,6 +17,11 @@ const MOI = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const getTotalMOI = useLoanStore((state) => state.getTotalMOI);
+  const moiEntries = useLoanStore((state) => state.moiEntries);
+
+  // Debug: Log MOI calculation
+  const totalMOI = getTotalMOI();
+  console.log('MOI Debug:', { moiEntries, totalMOI });
 
   const handleSignOut = async () => {
     try {
@@ -194,7 +199,7 @@ const MOI = () => {
                     </div>
                     <h2 className="text-xs sm:text-sm text-green-800 dark:text-green-300 uppercase tracking-wider font-medium">Total MOI</h2>
                   </div>
-                  <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{formatCurrency(getTotalMOI())}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalMOI)}</p>
                 </div>
               </div>
             </div>
@@ -203,16 +208,17 @@ const MOI = () => {
       </header>
       
       <main className="flex-1 pb-20 w-full">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-3 mb-6">
+        <div className="container mx-auto px-4 py-4 md:py-6">
+          <div className="flex items-center gap-3 mb-4 md:mb-6">
             <Button
               variant="outline"
               size="sm"
               onClick={() => navigate('/')}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-xs sm:text-sm"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Lending Dashboard
+              <span className="hidden sm:inline">Back to Lending Dashboard</span>
+              <span className="sm:hidden">Back</span>
             </Button>
           </div>
           <MOIDashboard />

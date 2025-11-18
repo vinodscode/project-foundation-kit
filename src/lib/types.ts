@@ -1,10 +1,9 @@
-
 export interface Payment {
   id: string;
   amount: number;
   date: Date;
   notes?: string;
-  type: 'principal' | 'interest';
+  type: 'principal' | 'interest' | 'topup';
 }
 
 export interface Loan {

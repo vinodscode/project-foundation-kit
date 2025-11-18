@@ -7,6 +7,7 @@ import { ArrowLeft, CalendarIcon, Edit, PlusCircle, Trash2, CreditCard, PiggyBan
 import { format } from "date-fns";
 import { Payment } from "@/lib/types";
 import PaymentDialog from "@/components/PaymentDialog";
+import TopUpDialog from "@/components/TopUpDialog";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -29,10 +30,14 @@ const LoanDetails = () => {
   const isMobile = useIsMobile();
   
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isTopUpDialogOpen, setIsTopUpDialogOpen] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
   
   const loans = useLoanStore((state) => state.loans);
+  const isLoading = useLoanStore((state) => state.isLoading);
+  const fetchLoans = useLoanStore((state) => state.fetchLoans);
   const addPayment = useLoanStore((state) => state.addPayment);
+  const addTopUp = useLoanStore((state) => state.addTopUp);
   const deletePayment = useLoanStore((state) => state.deletePayment);
   const getTotalInterestReceived = useLoanStore((state) => state.getTotalInterestReceived);
   const getTotalPrincipalPaid = useLoanStore((state) => state.getTotalPrincipalPaid);
@@ -47,6 +52,10 @@ const LoanDetails = () => {
   });
   
   useEffect(() => {
+    fetchLoans().catch(() => {});
+  }, [fetchLoans]);
+
+  useEffect(() => {
     if (loan?.id) {
       setLoanDetails({
         totalInterest: getTotalInterestReceived(loan.id),
@@ -57,6 +66,13 @@ const LoanDetails = () => {
   }, [loan, loans, getTotalInterestReceived, getTotalPrincipalPaid, getRemainingPrincipal]);
   
   if (!loan) {
+    if (isLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -94,7 +110,22 @@ const LoanDetails = () => {
       });
     }
   };
-  
+
+  const handleAddTopUp = async (amount: number, date: Date, notes?: string) => {
+    try {
+      await addTopUp(loan.id, { amount, date, notes });
+      setLoanDetails((prev) => ({
+        ...prev,
+        remainingPrincipal: prev.remainingPrincipal + amount,
+      }));
+      toast({ title: 'Top-up added', description: `Increased principal by ${formatCurrency(amount)}` });
+    } catch (error) {
+      console.error('Error adding top-up:', error);
+      const msg = (error as any)?.message || 'Please try again';
+      toast({ title: 'Failed to add top-up', description: msg, variant: 'destructive' });
+    }
+  };
+
   const handleDeletePayment = async (paymentId: string) => {
     try {
       const paymentToRemove = loan.payments.find(p => p.id === paymentId);
@@ -236,14 +267,25 @@ const LoanDetails = () => {
               Record principal and interest payments
             </p>
           </div>
-          <Button 
-            onClick={() => setIsPaymentDialogOpen(true)} 
-            className="gap-2"
-            size={isMobile ? "sm" : "default"}
-          >
-            <PlusCircle size={isMobile ? 14 : 16} />
-            <span>{isMobile ? "Add" : "Add Payment"}</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setIsPaymentDialogOpen(true)}
+              className="gap-2"
+              size={isMobile ? "sm" : "default"}
+            >
+              <PlusCircle size={isMobile ? 14 : 16} />
+              <span>{isMobile ? "Add" : "Add Payment"}</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsTopUpDialogOpen(true)}
+              className="gap-2"
+              size={isMobile ? "sm" : "default"}
+            >
+              <PlusCircle size={isMobile ? 14 : 16} />
+              <span>{isMobile ? "Top-up" : "Add Top-up"}</span>
+            </Button>
+          </div>
         </div>
         
         {sortedPayments.length === 0 ? (
@@ -270,11 +312,13 @@ const LoanDetails = () => {
                     </span>
                     <span className={cn(
                       "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium",
-                      payment.type === 'principal' 
-                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" 
-                        : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                      payment.type === 'principal'
+                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                        : payment.type === 'interest'
+                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                          : "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
                     )}>
-                      {payment.type === 'principal' ? 'Principal' : 'Interest'}
+                      {payment.type === 'principal' ? 'Principal' : payment.type === 'interest' ? 'Interest' : 'Top-up'}
                     </span>
                   </div>
                   <Button
@@ -310,6 +354,12 @@ const LoanDetails = () => {
         onOpenChange={setIsPaymentDialogOpen}
         onSubmit={handleAddPayment}
         loanAmount={loanDetails.remainingPrincipal}
+      />
+
+      <TopUpDialog
+        open={isTopUpDialogOpen}
+        onOpenChange={setIsTopUpDialogOpen}
+        onSubmit={handleAddTopUp}
       />
       
       <AlertDialog open={!!paymentToDelete} onOpenChange={() => setPaymentToDelete(null)}>

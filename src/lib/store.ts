@@ -28,13 +28,14 @@ export type LoanStoreState = {
   // MOI Mode
   moiMode: boolean;
   moiEntries: MOIEntry[];
-  
+
   fetchLoans: () => Promise<void>;
   addLoan: (loan: Omit<Loan, 'id' | 'payments'>) => Promise<Loan>;
   updateLoan: (loanId: string, loanData: Partial<Loan>) => Promise<void>;
   deleteLoan: (loanId: string) => Promise<void>;
   addPayment: (loanId: string, payment: Omit<Payment, 'id'>) => Promise<void>;
   deletePayment: (loanId: string, paymentId: string) => Promise<void>;
+  addTopUp: (loanId: string, topup: { amount: number; date: Date; notes?: string }) => Promise<void>;
   getLoanById: (loanId: string) => Loan | undefined;
   getTotalLent: () => number;
   getMonthlyInterest: () => number;
@@ -59,6 +60,42 @@ export type LoanStoreState = {
 
 // Helper function to transform database loan to app loan format
 const transformDbLoanToAppLoan = (dbLoan: any, payments: any[] = []): Loan => {
+  const mappedPayments: Payment[] = payments.map(payment => {
+    const rawType = payment.payment_type as 'principal' | 'interest';
+    const notes: string | undefined = payment.notes || undefined;
+    const isTopUp = typeof notes === 'string' && notes.includes('[TOPUP]');
+    return {
+      id: payment.id,
+      amount: parseFloat(payment.amount),
+      date: new Date(payment.payment_date),
+      notes,
+      type: isTopUp ? 'topup' : rawType,
+    } as Payment;
+  });
+
+  const syntheticTopups: Payment[] = [];
+  if (dbLoan.notes && typeof dbLoan.notes === 'string') {
+    const lines = dbLoan.notes.split(/\r?\n/);
+    lines.forEach((line: string, idx: number) => {
+      const m = line.match(/Top-up:\s*\+?([0-9]+(?:\.[0-9]+)?)\s*on\s*([0-9]{4}-[0-9]{2}-[0-9]{2})(?:\s*-\s*(.*))?/i);
+      if (m) {
+        const amount = parseFloat(m[1]);
+        const iso = m[2];
+        const noteTail = m[3];
+        const exists = mappedPayments.some(p => p.type === 'topup' && Math.abs(p.amount - amount) < 0.001 && p.date.toISOString().slice(0,10) === iso);
+        if (!exists) {
+          syntheticTopups.push({
+            id: `synthetic-topup-${dbLoan.id}-${idx}`,
+            amount,
+            date: new Date(iso),
+            notes: noteTail ? `${noteTail} [TOPUP]` : '[TOPUP] Parsed from notes',
+            type: 'topup',
+          });
+        }
+      }
+    });
+  }
+
   return {
     id: dbLoan.id,
     borrowerName: dbLoan.borrower_name,
@@ -68,14 +105,25 @@ const transformDbLoanToAppLoan = (dbLoan: any, payments: any[] = []): Loan => {
     notes: dbLoan.notes,
     loanType: dbLoan.loan_type as 'Gold' | 'Bond',
     goldGrams: dbLoan.gold_grams ? parseFloat(dbLoan.gold_grams) : undefined,
-    payments: payments.map(payment => ({
-      id: payment.id,
-      amount: parseFloat(payment.amount),
-      date: new Date(payment.payment_date),
-      notes: payment.notes,
-      type: payment.payment_type as 'principal' | 'interest'
-    }))
+    payments: [...mappedPayments, ...syntheticTopups],
   };
+};
+
+// Initialize MOI entries from localStorage
+const initializeMOIEntries = (): MOIEntry[] => {
+  try {
+    const saved = localStorage.getItem('moiEntries');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return parsed.map((entry: any) => ({
+        ...entry,
+        date: new Date(entry.date)
+      }));
+    }
+  } catch (error) {
+    console.error('Failed to load MOI entries from localStorage:', error);
+  }
+  return [];
 };
 
 export const useLoanStore = create<LoanStoreState>((set, get) => ({
@@ -91,7 +139,7 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
   },
   // MOI Mode
   moiMode: false,
-  moiEntries: [],
+  moiEntries: initializeMOIEntries(),
   
   fetchLoans: async () => {
     set({ isLoading: true, error: null });
@@ -244,7 +292,7 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
         amount: Number(data.amount),
         date: new Date(data.payment_date),
         notes: data.notes,
-        type: data.payment_type as 'principal' | 'interest'
+        type: data.payment_type as 'principal' | 'interest' | 'topup'
       };
 
       set((state) => ({
@@ -266,27 +314,94 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
     }
   },
   
+  addTopUp: async (loanId, topup) => {
+    set({ isLoading: true, error: null });
+    try {
+      const { loans } = get();
+      const loan = loans.find(l => l.id === loanId);
+      if (!loan) throw new Error('Loan not found');
+      const newAmount = loan.amount + topup.amount;
+
+      const noteLine = `Top-up: +${topup.amount} on ${topup.date.toISOString().split('T')[0]}${topup.notes ? ` - ${topup.notes}` : ''}`;
+      const updatedNotes = loan.notes ? `${loan.notes}\n${noteLine}` : noteLine;
+
+      // Update loan principal
+      const { error: loanError } = await supabase
+        .from('loans')
+        .update({ amount: newAmount, notes: updatedNotes })
+        .eq('id', loanId);
+      if (loanError) throw loanError;
+
+      // Create a payment record marked as topup
+      const { data: paymentRow, error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          loan_id: loanId,
+          amount: topup.amount,
+          payment_date: topup.date.toISOString(),
+          notes: topup.notes ? `${topup.notes} [TOPUP]` : '[TOPUP] Top-up added',
+          payment_type: 'principal',
+          user_id: (await supabase.auth.getUser()).data.user?.id
+        })
+        .select()
+        .single();
+      if (paymentError) throw paymentError;
+
+      const newPayment: Payment = {
+        id: paymentRow.id,
+        amount: Number(paymentRow.amount),
+        date: new Date(paymentRow.payment_date),
+        notes: paymentRow.notes,
+        type: 'topup'
+      };
+
+      set((state) => ({
+        loans: state.loans.map((l) => (l.id === loanId ? { ...l, amount: newAmount, notes: updatedNotes, payments: [...l.payments, newPayment] } : l)),
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error('Error adding top-up:', error);
+      set({ error: error as Error, isLoading: false });
+      throw error;
+    }
+  },
+
   deletePayment: async (loanId, paymentId) => {
     set({ isLoading: true, error: null });
     try {
+      const { loans } = get();
+      const loan = loans.find(l => l.id === loanId);
+      const payment = loan?.payments.find(p => p.id === paymentId);
+
       const { error } = await supabase
         .from('payments')
         .delete()
         .eq('id', paymentId);
-
       if (error) throw error;
 
+      // If deleting a top-up, also reduce the loan principal
+      if (loan && payment && payment.type === 'topup') {
+        const newAmount = Math.max(0, loan.amount - payment.amount);
+        const { error: loanErr } = await supabase
+          .from('loans')
+          .update({ amount: newAmount })
+          .eq('id', loanId);
+        if (loanErr) throw loanErr;
+
+        set((state) => ({
+          loans: state.loans.map((l) =>
+            l.id === loanId
+              ? { ...l, amount: newAmount, payments: l.payments.filter(p => p.id !== paymentId) }
+              : l
+          ),
+          isLoading: false,
+        }));
+        return;
+      }
+
       set((state) => ({
-        loans: state.loans.map((loan) => {
-          if (loan.id === loanId) {
-            return {
-              ...loan,
-              payments: loan.payments.filter(p => p.id !== paymentId)
-            };
-          }
-          return loan;
-        }),
-        isLoading: false
+        loans: state.loans.map((l) => (l.id === loanId ? { ...l, payments: l.payments.filter(p => p.id !== paymentId) } : l)),
+        isLoading: false,
       }));
     } catch (error) {
       console.error('Error deleting payment:', error);
@@ -496,15 +611,35 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
       ...entry,
       id: crypto.randomUUID()
     };
-    set((state) => ({
-      moiEntries: [...state.moiEntries, newEntry]
-    }));
+    set((state) => {
+      const updatedEntries = [...state.moiEntries, newEntry];
+      // Persist to localStorage
+      try {
+        localStorage.setItem('moiEntries', JSON.stringify(updatedEntries.map(e => ({
+          ...e,
+          date: e.date.toISOString()
+        }))));
+      } catch (error) {
+        console.error('Failed to save MOI entries to localStorage:', error);
+      }
+      return { moiEntries: updatedEntries };
+    });
   },
 
   deleteMoiEntry: (entryId) => {
-    set((state) => ({
-      moiEntries: state.moiEntries.filter(entry => entry.id !== entryId)
-    }));
+    set((state) => {
+      const updatedEntries = state.moiEntries.filter(entry => entry.id !== entryId);
+      // Persist to localStorage
+      try {
+        localStorage.setItem('moiEntries', JSON.stringify(updatedEntries.map(e => ({
+          ...e,
+          date: e.date.toISOString()
+        }))));
+      } catch (error) {
+        console.error('Failed to save MOI entries to localStorage:', error);
+      }
+      return { moiEntries: updatedEntries };
+    });
   },
 
   getTotalMOI: () => {

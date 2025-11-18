@@ -29,21 +29,49 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const clearStaleAuth = () => {
+      try {
+        // Remove any Supabase auth tokens from storage
+        const removeKeys = (storage: Storage) => {
+          const keys: string[] = [];
+          for (let i = 0; i < storage.length; i++) {
+            const key = storage.key(i);
+            if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) keys.push(key);
+          }
+          keys.forEach((k) => storage.removeItem(k));
+        };
+        removeKeys(localStorage);
+        removeKeys(sessionStorage);
+      } catch {}
+    };
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+          clearStaleAuth();
+        }
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // THEN check for existing session with error handling
+    (async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        clearStaleAuth();
+        await supabase.auth.signOut();
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      setSession(data.session);
+      setUser(data.session?.user ?? null);
       setLoading(false);
-    });
+    })();
 
     return () => subscription.unsubscribe();
   }, []);

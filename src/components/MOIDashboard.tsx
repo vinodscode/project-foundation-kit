@@ -49,11 +49,11 @@ const MOIDashboard = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold mb-2">MOI Dashboard</h1>
-        <p className="text-muted-foreground">Manage your MOI entries</p>
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">MOI Dashboard</h1>
+        <p className="text-sm md:text-base text-muted-foreground">Manage your MOI entries</p>
       </div>
 
       {/* Add Entry Section */}
@@ -87,7 +87,7 @@ const MOIDashboard = () => {
                 </Button>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>
                   <Input
@@ -99,7 +99,7 @@ const MOIDashboard = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="amount">Amount</Label>
                   <Input
@@ -112,7 +112,7 @@ const MOIDashboard = () => {
                     required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="date">Date</Label>
                   <DatePicker
@@ -121,8 +121,8 @@ const MOIDashboard = () => {
                     placeholder="Select date"
                   />
                 </div>
-                
-                <div className="space-y-2">
+
+                <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
@@ -134,15 +134,16 @@ const MOIDashboard = () => {
                 </div>
               </div>
               
-              <div className="flex gap-2">
-                <Button type="submit">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button type="submit" className="flex-1 sm:flex-none">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Entry
                 </Button>
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => setShowForm(false)}
+                  className="flex-1 sm:flex-none"
                 >
                   Cancel
                 </Button>
@@ -156,14 +157,14 @@ const MOIDashboard = () => {
               No entries yet. Add your first MOI entry above.
             </div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-border">
+            <div className="overflow-x-auto rounded-lg border border-border">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead className="font-semibold">Date</TableHead>
-                    <TableHead className="font-semibold">Name</TableHead>
-                    <TableHead className="font-semibold">Description</TableHead>
-                    <TableHead className="text-right font-semibold">Amount</TableHead>
+                    <TableHead className="font-semibold min-w-[100px]">Date</TableHead>
+                    <TableHead className="font-semibold min-w-[120px]">Name</TableHead>
+                    <TableHead className="font-semibold min-w-[150px] hidden sm:table-cell">Description</TableHead>
+                    <TableHead className="text-right font-semibold min-w-[100px]">Amount</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -176,14 +177,23 @@ const MOIDashboard = () => {
                         className="border-b border-border hover:bg-muted/30 transition-colors"
                       >
                         <TableCell className="font-medium">
-                          {format(entry.date, "MMM dd, yyyy")}
+                          <div className="text-sm sm:text-base">
+                            {format(entry.date, "MMM dd, yyyy")}
+                          </div>
                         </TableCell>
-                        <TableCell className="font-medium">{entry.name}</TableCell>
-                        <TableCell className="text-muted-foreground max-w-xs truncate">
+                        <TableCell className="font-medium">
+                          <div className="text-sm sm:text-base">{entry.name}</div>
+                          <div className="text-xs text-muted-foreground sm:hidden">
+                            {entry.description || "No description"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground max-w-xs truncate hidden sm:table-cell">
                           {entry.description || "-"}
                         </TableCell>
                         <TableCell className="text-right font-mono font-semibold">
-                          {formatCurrency(entry.amount)}
+                          <div className="text-sm sm:text-base">
+                            {formatCurrency(entry.amount)}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Button

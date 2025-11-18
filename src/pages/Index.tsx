@@ -10,7 +10,6 @@ import LoanCard from "@/components/LoanCard";
 
 import { useLoanStore } from "@/lib/store";
 import { Skeleton } from "@/components/ui/skeleton";
-import SearchBox from "@/components/SearchBox";
 import LoanFilters from "@/components/LoanFilters";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loan } from "@/lib/types";
@@ -130,12 +129,20 @@ const Index = () => {
         ) : (
             <div className="container px-4 sm:px-6 max-w-screen-2xl mx-auto py-4">
             <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
-              <h2 className="text-xl font-medium">Your Loans</h2>
-              
+              <div className="flex flex-row items-center justify-center">
+                <h2 className="text-xl font-medium text-center pl-[5px] pr-5">Your Loans</h2>
+                <Button
+                  onClick={() => navigate("/add-loan")}
+                  className="gap-2 ml-auto justify-end items-center sm:ml-auto sm:justify-center sm:items-center"
+                  size="sm"
+                  variant="outline"
+                >
+                  <PlusCircle size={16} />
+                  <span>Add Loan</span>
+                </Button>
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-2 flex-1 lg:ml-4">
-                <div className="flex-1">
-                  <SearchBox />
-                </div>
                 <div className="flex items-center gap-2">
                   <LoanFilters />
                   <Button
@@ -147,15 +154,6 @@ const Index = () => {
                   >
                     <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
                     <span className="hidden sm:inline">Refresh</span>
-                  </Button>
-                  <Button
-                    onClick={() => navigate("/add-loan")}
-                    className="gap-2"
-                    size="sm"
-                    variant="outline"
-                  >
-                    <PlusCircle size={16} />
-                    <span>Add Loan</span>
                   </Button>
                 </div>
               </div>
