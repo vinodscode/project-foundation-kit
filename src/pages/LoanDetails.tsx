@@ -81,78 +81,76 @@ const LoanDetails = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-32">
 
       {/* Hero */}
-      <div className="bg-gradient-to-b from-blue-600 to-indigo-700 dark:from-blue-900 dark:to-indigo-950 px-4 pt-12 pb-8">
-        {/* Nav */}
-        <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={() => navigate(-1)}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/15 active:bg-white/25 transition-colors"
-          >
-            <ArrowLeft size={18} className="text-white" />
-          </button>
-          <div className="flex items-center gap-2">
+      <div className="bg-gradient-to-b from-blue-600 to-indigo-700 dark:from-blue-900 dark:to-indigo-950 px-4 pt-3 pb-5">
+        {/* Nav + Name */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={() => navigate(-1)}
+              className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-xl bg-white/15 active:bg-white/25 transition-colors"
+            >
+              <ArrowLeft size={16} className="text-white" />
+            </button>
+            <h1 className="text-xl font-medium text-white leading-9 truncate">{loan.borrowerName}</h1>
+          </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <button
               onClick={() => setShowEditHistory(true)}
-              className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-white/15 active:bg-white/25 transition-colors"
+              className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-white/15 active:bg-white/25 transition-colors"
             >
-              <History size={16} className="text-white" />
+              <History size={14} className="text-white" />
               {loan.editHistory && loan.editHistory.length > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-amber-400 text-[9px] font-bold text-gray-900 flex items-center justify-center px-1">
+                <span className="absolute -top-1 -right-1 min-w-[14px] h-3.5 rounded-full bg-amber-400 text-[8px] font-bold text-gray-900 flex items-center justify-center px-0.5">
                   {loan.editHistory.length}
                 </span>
               )}
             </button>
             <button
               onClick={() => navigate(`/loans/${loan.id}/edit`)}
-              className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/15 active:bg-white/25 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/15 active:bg-white/25 transition-colors"
             >
-              <Edit size={16} className="text-white" />
+              <Edit size={14} className="text-white" />
             </button>
           </div>
         </div>
 
-        {/* Name + tags */}
-        <div className="mb-5">
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold text-white leading-tight">{loan.borrowerName}</h1>
-            {isCompleted && (
-              <span className="text-[10px] font-semibold bg-green-400/20 text-green-200 border border-green-400/30 px-2 py-0.5 rounded-md">
-                Paid off
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-wrap mt-2">
-            <span className="text-[11px] font-semibold bg-white/20 text-white px-2.5 py-0.5 rounded-md">
-              {loan.interestRate}% p.a.
+        {/* Tags */}
+        <div className="flex items-center gap-1.5 flex-wrap mb-3">
+          {isCompleted && (
+            <span className="text-[9px] font-semibold bg-green-400/20 text-green-200 border border-green-400/30 px-1.5 py-0.5 rounded-md">
+              Paid off
             </span>
-            <span className="text-[11px] text-blue-100 bg-white/10 px-2.5 py-0.5 rounded-md border border-white/15">
-              {loan.loanType ?? 'Gold'}{loan.loanType === 'Gold' && loan.goldGrams ? ` · ${loan.goldGrams}g` : ''}
-            </span>
-            <span className="text-[11px] text-blue-200">
-              {format(new Date(loan.startDate), "d MMM yyyy")}
-            </span>
-          </div>
+          )}
+          <span className="text-[10px] font-semibold bg-white/20 text-white px-2 py-0.5 rounded-md">
+            {loan.interestRate}% p.a.
+          </span>
+          <span className="text-[10px] text-blue-100 bg-white/10 px-2 py-0.5 rounded-md border border-white/15">
+            {loan.loanType ?? 'Gold'}{loan.loanType === 'Gold' && loan.goldGrams ? ` · ${loan.goldGrams}g` : ''}
+          </span>
+          <span className="text-[10px] text-blue-200">
+            {format(new Date(loan.startDate), "d MMM yyyy")}
+          </span>
         </div>
 
         {/* Key amounts */}
-        <div className="grid grid-cols-2 gap-2.5 mb-5">
-          <div className="bg-white/10 rounded-2xl px-4 py-3 backdrop-blur-sm">
-            <p className="text-[10px] text-blue-200 uppercase tracking-wider mb-1">Outstanding</p>
-            <p className="text-xl font-bold text-white tabular-nums">{formatCurrency(remainingPrincipal)}</p>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="bg-white/10 rounded-xl px-3 py-2.5 backdrop-blur-sm">
+            <p className="text-[9px] text-blue-200 uppercase tracking-wider mb-0.5">Outstanding</p>
+            <p className="text-lg font-bold text-white tabular-nums">{formatCurrency(remainingPrincipal)}</p>
           </div>
-          <div className="bg-white/10 rounded-2xl px-4 py-3 backdrop-blur-sm">
-            <p className="text-[10px] text-blue-200 uppercase tracking-wider mb-1">Original Loan</p>
-            <p className="text-xl font-bold text-white tabular-nums">{formatCurrency(loan.amount)}</p>
+          <div className="bg-white/10 rounded-xl px-3 py-2.5 backdrop-blur-sm">
+            <p className="text-[9px] text-blue-200 uppercase tracking-wider mb-0.5">Original Loan</p>
+            <p className="text-lg font-bold text-white tabular-nums">{formatCurrency(loan.amount)}</p>
           </div>
         </div>
 
         {/* Progress */}
         <div>
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-xs font-medium text-blue-200">Repaid {repaymentPercent}%</span>
-            <span className="text-xs text-blue-300 tabular-nums">{formatCurrency(principalPaid)} of {formatCurrency(loan.amount)}</span>
+          <div className="flex justify-between items-center mb-1.5">
+            <span className="text-[11px] font-medium text-blue-200">Repaid {repaymentPercent}%</span>
+            <span className="text-[11px] text-blue-300 tabular-nums">{formatCurrency(principalPaid)} of {formatCurrency(loan.amount)}</span>
           </div>
-          <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
             <div
               className="h-full bg-white rounded-full transition-all duration-700"
               style={{ width: `${repaymentPercent}%` }}
@@ -162,18 +160,18 @@ const LoanDetails = () => {
       </div>
 
       {/* Stats strip */}
-      <div className="mx-4 -mt-1 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700/50 grid grid-cols-3 divide-x divide-gray-100 dark:divide-gray-700 overflow-hidden">
-        <div className="px-3 py-3.5 text-center">
-          <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">Paid</p>
-          <p className="text-sm font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(principalPaid)}</p>
+      <div className="mx-4 mt-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700/50 grid grid-cols-3 divide-x divide-gray-100 dark:divide-gray-700 overflow-hidden">
+        <div className="px-2 py-2.5 text-center">
+          <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-0.5">Paid</p>
+          <p className="text-[13px] font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(principalPaid)}</p>
         </div>
-        <div className="px-3 py-3.5 text-center">
-          <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">Interest</p>
-          <p className="text-sm font-bold text-green-600 dark:text-green-400 tabular-nums">{formatCurrency(totalInterest)}</p>
+        <div className="px-2 py-2.5 text-center">
+          <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-0.5">Interest</p>
+          <p className="text-[13px] font-bold text-green-600 dark:text-green-400 tabular-nums">{formatCurrency(totalInterest)}</p>
         </div>
-        <div className="px-3 py-3.5 text-center">
-          <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-0.5">Monthly</p>
-          <p className="text-sm font-bold text-amber-600 dark:text-amber-400 tabular-nums">
+        <div className="px-2 py-2.5 text-center">
+          <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-0.5">Monthly</p>
+          <p className="text-[13px] font-bold text-amber-600 dark:text-amber-400 tabular-nums">
             {isCompleted ? '—' : formatCurrency(monthlyInterest)}
           </p>
         </div>
