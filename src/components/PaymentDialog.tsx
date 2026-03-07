@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -11,21 +11,34 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/store";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Payment } from "@/lib/types";
 
 interface PaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (amount: number, date: Date, type: 'principal' | 'interest', notes?: string) => void;
   loanAmount?: number;
+  editPayment?: Payment | null;
 }
 
-const PaymentDialog = ({ open, onOpenChange, onSubmit, loanAmount }: PaymentDialogProps) => {
+const PaymentDialog = ({ open, onOpenChange, onSubmit, loanAmount, editPayment }: PaymentDialogProps) => {
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState<Date>(new Date());
   const [notes, setNotes] = useState("");
   const [paymentType, setPaymentType] = useState<'principal' | 'interest'>('interest');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    if (editPayment) {
+      setAmount(editPayment.amount.toString());
+      setDate(new Date(editPayment.date));
+      setNotes(editPayment.notes ?? "");
+      setPaymentType(editPayment.type);
+    } else {
+      resetForm();
+    }
+  }, [editPayment, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +66,8 @@ const PaymentDialog = ({ open, onOpenChange, onSubmit, loanAmount }: PaymentDial
     setErrors({});
   };
 
+  const isEditing = !!editPayment;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(
@@ -60,9 +75,9 @@ const PaymentDialog = ({ open, onOpenChange, onSubmit, loanAmount }: PaymentDial
         isMobile ? "w-[95%] p-5" : ""
       )}>
         <DialogHeader>
-          <DialogTitle className="text-lg">Add Payment</DialogTitle>
+          <DialogTitle className="text-lg">{isEditing ? 'Edit Payment' : 'Add Payment'}</DialogTitle>
           <DialogDescription className="text-xs">
-            Record a principal or interest payment.
+            {isEditing ? 'Update payment details.' : 'Record a principal or interest payment.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -164,7 +179,7 @@ const PaymentDialog = ({ open, onOpenChange, onSubmit, loanAmount }: PaymentDial
               )}
             >
               <Check size={16} />
-              Save Payment
+              {isEditing ? 'Update Payment' : 'Save Payment'}
             </Button>
           </DialogFooter>
         </form>

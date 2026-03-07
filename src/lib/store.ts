@@ -48,6 +48,7 @@ export type LoanStoreState = {
   updateLoan: (loanId: string, loanData: Partial<Loan>) => Promise<void>;
   deleteLoan: (loanId: string) => Promise<void>;
   addPayment: (loanId: string, payment: Omit<Payment, 'id'>) => Promise<void>;
+  updatePayment: (loanId: string, paymentId: string, updates: Partial<Omit<Payment, 'id'>>) => Promise<void>;
   deletePayment: (loanId: string, paymentId: string) => Promise<void>;
   getLoanById: (loanId: string) => Loan | undefined;
   getTotalLent: () => number;
@@ -316,6 +317,43 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
     }
   },
   
+  updatePayment: async (loanId, paymentId, updates) => {
+    set({ isLoading: true, error: null });
+    try {
+      const updateData: Record<string, unknown> = {};
+      if (updates.amount !== undefined) updateData.amount = updates.amount;
+      if (updates.date !== undefined) updateData.payment_date = updates.date.toISOString();
+      if (updates.notes !== undefined) updateData.notes = updates.notes;
+      if (updates.type !== undefined) updateData.payment_type = updates.type;
+
+      const { error } = await supabase
+        .from('payments')
+        .update(updateData)
+        .eq('id', paymentId);
+
+      if (error) throw error;
+
+      set((state) => ({
+        loans: state.loans.map((loan) => {
+          if (loan.id === loanId) {
+            return {
+              ...loan,
+              payments: loan.payments.map(p =>
+                p.id === paymentId ? { ...p, ...updates } : p
+              ),
+            };
+          }
+          return loan;
+        }),
+        isLoading: false
+      }));
+    } catch (error) {
+      console.error('Error updating payment:', error);
+      set({ error: error as Error, isLoading: false });
+      throw error;
+    }
+  },
+
   deletePayment: async (loanId, paymentId) => {
     set({ isLoading: true, error: null });
     try {

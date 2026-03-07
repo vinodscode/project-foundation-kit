@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, useLoanStore } from "@/lib/store";
-import { ArrowLeft, Edit, PlusCircle, Trash2, PiggyBank, Banknote, History, Clock } from "lucide-react";
+import { ArrowLeft, Edit, PlusCircle, Pencil, PiggyBank, Banknote, History, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { Payment, EditRecord } from "@/lib/types";
 import {
@@ -13,16 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import PaymentDialog from "@/components/PaymentDialog";
 import { cn } from "@/lib/utils";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 
 const LoanDetails = () => {
@@ -30,12 +20,12 @@ const LoanDetails = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [showEditHistory, setShowEditHistory] = useState(false);
 
   const loans = useLoanStore((state) => state.loans);
   const addPayment = useLoanStore((state) => state.addPayment);
-  const deletePayment = useLoanStore((state) => state.deletePayment);
+  const updatePayment = useLoanStore((state) => state.updatePayment);
   const getTotalInterestReceived = useLoanStore((state) => state.getTotalInterestReceived);
   const getTotalPrincipalPaid = useLoanStore((state) => state.getTotalPrincipalPaid);
   const getRemainingPrincipal = useLoanStore((state) => state.getRemainingPrincipal);
@@ -60,25 +50,24 @@ const LoanDetails = () => {
   const repaymentPercent = loan.amount > 0 ? Math.min(100, Math.round((principalPaid / loan.amount) * 100)) : 0;
   const isCompleted = remainingPrincipal <= 0;
 
-  const handleAddPayment = async (amount: number, date: Date, type: 'principal' | 'interest', notes?: string) => {
+  const handlePaymentSubmit = async (amount: number, date: Date, type: 'principal' | 'interest', notes?: string) => {
     try {
-      await addPayment(loan.id, { amount, date, notes, type });
-      toast({
-        title: "Payment recorded",
-        description: `${type === 'principal' ? 'Principal' : 'Interest'} payment of ${formatCurrency(amount)} added.`,
-      });
+      if (editingPayment) {
+        await updatePayment(loan.id, editingPayment.id, { amount, date, type, notes });
+        toast({
+          title: "Payment updated",
+          description: `${type === 'principal' ? 'Principal' : 'Interest'} payment updated to ${formatCurrency(amount)}.`,
+        });
+        setEditingPayment(null);
+      } else {
+        await addPayment(loan.id, { amount, date, notes, type });
+        toast({
+          title: "Payment recorded",
+          description: `${type === 'principal' ? 'Principal' : 'Interest'} payment of ${formatCurrency(amount)} added.`,
+        });
+      }
     } catch {
-      toast({ title: "Failed to add payment", variant: "destructive" });
-    }
-  };
-
-  const handleDeletePayment = async (paymentId: string) => {
-    try {
-      await deletePayment(loan.id, paymentId);
-      setPaymentToDelete(null);
-      toast({ title: "Payment deleted" });
-    } catch {
-      toast({ title: "Failed to delete", variant: "destructive" });
+      toast({ title: editingPayment ? "Failed to update" : "Failed to add payment", variant: "destructive" });
     }
   };
 
@@ -252,10 +241,10 @@ const LoanDetails = () => {
                     </div>
                   </div>
                   <button
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-300 active:text-red-500 active:bg-red-50 dark:active:bg-red-900/20 transition-colors shrink-0"
-                    onClick={() => setPaymentToDelete(payment.id)}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-300 active:text-blue-500 active:bg-blue-50 dark:active:bg-blue-900/20 transition-colors shrink-0"
+                    onClick={() => { setEditingPayment(payment); setIsPaymentDialogOpen(true); }}
                   >
-                    <Trash2 size={15} />
+                    <Pencil size={15} />
                   </button>
                 </div>
               </div>
@@ -267,7 +256,7 @@ const LoanDetails = () => {
       {/* Floating Add Button */}
       <div className="fixed bottom-20 left-0 right-0 px-4 z-30">
         <button
-          onClick={() => setIsPaymentDialogOpen(true)}
+          onClick={() => { setEditingPayment(null); setIsPaymentDialogOpen(true); }}
           className="w-full flex items-center justify-center gap-2 bg-blue-600 active:bg-blue-700 text-white font-semibold text-sm py-3.5 rounded-2xl shadow-lg shadow-blue-600/25 transition-colors"
         >
           <PlusCircle size={18} />
@@ -277,30 +266,11 @@ const LoanDetails = () => {
 
       <PaymentDialog
         open={isPaymentDialogOpen}
-        onOpenChange={setIsPaymentDialogOpen}
-        onSubmit={handleAddPayment}
+        onOpenChange={(open) => { setIsPaymentDialogOpen(open); if (!open) setEditingPayment(null); }}
+        onSubmit={handlePaymentSubmit}
         loanAmount={remainingPrincipal}
+        editPayment={editingPayment}
       />
-
-      <AlertDialog open={!!paymentToDelete} onOpenChange={() => setPaymentToDelete(null)}>
-        <AlertDialogContent className="rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Payment</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => paymentToDelete && handleDeletePayment(paymentToDelete)}
-              className="bg-red-600 text-white hover:bg-red-700 rounded-xl"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Edit History Dialog */}
       <Dialog open={showEditHistory} onOpenChange={setShowEditHistory}>
