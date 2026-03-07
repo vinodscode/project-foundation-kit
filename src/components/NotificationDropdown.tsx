@@ -85,8 +85,8 @@ const NotificationDropdown = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors">
-          <Bell size={16} className="text-white" />
+        <button className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100/60 dark:bg-white/10 hover:bg-gray-200/60 dark:hover:bg-white/20 transition-colors border border-gray-200/50 dark:border-white/10">
+          <Bell size={16} className="text-gray-600 dark:text-gray-300" />
           {hasReminders && (
             <span className="absolute -top-1 -right-1 w-4.5 h-4.5 min-w-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
               {reminders.length}

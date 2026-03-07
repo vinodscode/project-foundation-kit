@@ -30,11 +30,13 @@ const Index = () => {
   const getRemainingPrincipal = useLoanStore((state) => state.getRemainingPrincipal);
   const getTotalGiven = useLoanStore((state) => state.getTotalGiven);
   const getTotalReceived = useLoanStore((state) => state.getTotalReceived);
+  const fetchMoiTransactions = useLoanStore((state) => state.fetchMoiTransactions);
   const moiTransactions = useLoanStore((state) => state.moiTransactions);
 
   useEffect(() => {
     fetchLoans().catch(err => console.error("Error fetching loans:", err));
-  }, [fetchLoans]);
+    fetchMoiTransactions().catch(err => console.error("Error fetching MOI:", err));
+  }, [fetchLoans, fetchMoiTransactions]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -7,8 +8,13 @@ import MOIDashboard from "@/components/MOIDashboard";
 
 const MOI = () => {
   const navigate = useNavigate();
+  const fetchMoiTransactions = useLoanStore((state) => state.fetchMoiTransactions);
   const getTotalGiven = useLoanStore((state) => state.getTotalGiven);
   const getTotalReceived = useLoanStore((state) => state.getTotalReceived);
+
+  useEffect(() => {
+    fetchMoiTransactions();
+  }, [fetchMoiTransactions]);
 
   const totalGiven = getTotalGiven();
   const totalReceived = getTotalReceived();
