@@ -23,8 +23,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Trash2, Plus, X, Search, ArrowUpCircle, ArrowDownCircle, Users } from "lucide-react";
-import { useLoanStore, formatCurrency, MOITransaction } from "@/lib/store";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Trash2, Plus, X, Search, ArrowUpCircle, ArrowDownCircle, Users, Pencil, History, Clock } from "lucide-react";
+import { useLoanStore, formatCurrency, MOITransaction, MOIEditRecord } from "@/lib/store";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -52,6 +58,17 @@ const RELATIONSHIPS = [
 const functionTypeLabel = (val: string) =>
   FUNCTION_TYPES.find(f => f.value === val)?.label ?? val;
 
+const FIELD_LABELS: Record<string, string> = {
+  type: 'Type',
+  personName: 'Person Name',
+  relationship: 'Relationship',
+  functionType: 'Function Type',
+  functionName: 'Event Name',
+  functionDate: 'Date',
+  amount: 'Amount',
+  notes: 'Notes',
+};
+
 interface FormState {
   type: 'given' | 'received';
   personName: string;
@@ -77,18 +94,21 @@ const defaultForm = (): FormState => ({
 const MOIDashboard = () => {
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
+  const [editingTx, setEditingTx] = useState<MOITransaction | null>(null);
   const [form, setForm] = useState<FormState>(defaultForm());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'given' | 'received'>('all');
   const [filterFunction, setFilterFunction] = useState('all');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [historyTx, setHistoryTx] = useState<MOITransaction | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const moiTransactions = useLoanStore((state) => state.moiTransactions);
   const moiLoading = useLoanStore((state) => state.moiLoading);
   const fetchMoiTransactions = useLoanStore((state) => state.fetchMoiTransactions);
   const addMoiTransaction = useLoanStore((state) => state.addMoiTransaction);
+  const updateMoiTransaction = useLoanStore((state) => state.updateMoiTransaction);
   const deleteMoiTransaction = useLoanStore((state) => state.deleteMoiTransaction);
 
   useEffect(() => {
@@ -129,29 +149,68 @@ const MOIDashboard = () => {
     return Object.keys(e).length === 0;
   };
 
+  const openEditForm = (tx: MOITransaction) => {
+    setEditingTx(tx);
+    setForm({
+      type: tx.type,
+      personName: tx.personName,
+      relationship: tx.relationship ?? '',
+      functionType: tx.functionType,
+      functionName: tx.functionName ?? '',
+      functionDate: new Date(tx.functionDate),
+      amount: tx.amount.toString(),
+      notes: tx.notes ?? '',
+    });
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingTx(null);
+    setForm(defaultForm());
+    setErrors({});
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
     setIsSubmitting(true);
     try {
-      await addMoiTransaction({
-        type: form.type,
-        personName: form.personName.trim(),
-        relationship: form.relationship || undefined,
-        functionType: form.functionType,
-        functionName: form.functionName.trim() || undefined,
-        functionDate: form.functionDate!,
-        amount: parseFloat(form.amount),
-        notes: form.notes.trim() || undefined,
-      });
-      toast({
-        title: "Transaction added",
-        description: `MOI ${form.type === 'given' ? 'given to' : 'received from'} ${form.personName} recorded.`,
-      });
-      setForm(defaultForm());
-      setShowForm(false);
+      if (editingTx) {
+        await updateMoiTransaction(editingTx.id, {
+          type: form.type,
+          personName: form.personName.trim(),
+          relationship: form.relationship || undefined,
+          functionType: form.functionType,
+          functionName: form.functionName.trim() || undefined,
+          functionDate: form.functionDate!,
+          amount: parseFloat(form.amount),
+          notes: form.notes.trim() || undefined,
+        });
+        toast({
+          title: "Transaction updated",
+          description: `MOI entry for ${form.personName} has been updated.`,
+        });
+      } else {
+        await addMoiTransaction({
+          type: form.type,
+          personName: form.personName.trim(),
+          relationship: form.relationship || undefined,
+          functionType: form.functionType,
+          functionName: form.functionName.trim() || undefined,
+          functionDate: form.functionDate!,
+          amount: parseFloat(form.amount),
+          notes: form.notes.trim() || undefined,
+        });
+        toast({
+          title: "Transaction added",
+          description: `MOI ${form.type === 'given' ? 'given to' : 'received from'} ${form.personName} recorded.`,
+        });
+      }
+      closeForm();
     } catch {
-      toast({ title: "Failed to add", variant: "destructive" });
+      toast({ title: editingTx ? "Failed to update" : "Failed to add", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -174,7 +233,7 @@ const MOIDashboard = () => {
       {/* Add Button */}
       {!showForm && (
         <button
-          onClick={() => setShowForm(true)}
+          onClick={() => { setEditingTx(null); setForm(defaultForm()); setShowForm(true); }}
           className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm py-3 rounded-2xl transition-colors"
         >
           <Plus size={16} />
@@ -182,13 +241,15 @@ const MOIDashboard = () => {
         </button>
       )}
 
-      {/* Add Form */}
+      {/* Add / Edit Form */}
       {showForm && (
         <div className="bg-white dark:bg-gray-900 rounded-2xl border-2 border-blue-100 dark:border-blue-900/30 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold">New Transaction</h3>
+            <h3 className="text-sm font-semibold">
+              {editingTx ? 'Edit Transaction' : 'New Transaction'}
+            </h3>
             <button
-              onClick={() => { setShowForm(false); setForm(defaultForm()); setErrors({}); }}
+              onClick={closeForm}
               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <X size={16} className="text-gray-400" />
@@ -323,12 +384,12 @@ const MOIDashboard = () => {
                   form.type === 'given' ? "bg-red-500 hover:bg-red-600" : "bg-green-600 hover:bg-green-700"
                 )}
               >
-                {isSubmitting ? "Saving..." : `Save ${form.type === 'given' ? 'Given' : 'Received'}`}
+                {isSubmitting ? "Saving..." : editingTx ? 'Update' : `Save ${form.type === 'given' ? 'Given' : 'Received'}`}
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => { setShowForm(false); setForm(defaultForm()); setErrors({}); }}
+                onClick={closeForm}
                 className="rounded-xl h-11"
               >
                 Cancel
@@ -402,7 +463,13 @@ const MOIDashboard = () => {
           ) : (
             <div className="space-y-2">
               {filtered.map(tx => (
-                <TransactionCard key={tx.id} tx={tx} onDelete={() => setDeleteId(tx.id)} />
+                <TransactionCard
+                  key={tx.id}
+                  tx={tx}
+                  onEdit={() => openEditForm(tx)}
+                  onDelete={() => setDeleteId(tx.id)}
+                  onViewHistory={() => setHistoryTx(tx)}
+                />
               ))}
             </div>
           )}
@@ -469,12 +536,78 @@ const MOIDashboard = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit History Dialog */}
+      <Dialog open={!!historyTx} onOpenChange={() => setHistoryTx(null)}>
+        <DialogContent className="rounded-2xl max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm">
+              <History size={16} />
+              Edit History — {historyTx?.personName}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-3 py-2">
+            {(!historyTx?.editHistory || historyTx.editHistory.length === 0) ? (
+              <div className="text-center py-8">
+                <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
+                  <Clock size={20} className="text-gray-400" />
+                </div>
+                <p className="text-sm text-muted-foreground">No edits yet</p>
+                <p className="text-[11px] text-muted-foreground mt-1">Edit history will appear here once changes are made.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {[...historyTx.editHistory].reverse().map((record, idx) => (
+                  <EditHistoryCard key={idx} record={record} index={historyTx!.editHistory!.length - idx} />
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-const TransactionCard = ({ tx, onDelete }: { tx: MOITransaction; onDelete: () => void }) => {
+const EditHistoryCard = ({ record, index }: { record: MOIEditRecord; index: number }) => {
+  const changeEntries = Object.entries(record.changes);
+  return (
+    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700/50 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Edit #{index}</span>
+        <span className="text-[10px] text-muted-foreground">
+          {format(new Date(record.editedAt), "dd MMM yyyy, hh:mm a")}
+        </span>
+      </div>
+      <div className="space-y-1.5">
+        {changeEntries.map(([field, { from, to }]) => (
+          <div key={field} className="text-[11px]">
+            <span className="font-medium text-gray-600 dark:text-gray-300">{FIELD_LABELS[field] ?? field}:</span>
+            <div className="flex items-center gap-1.5 mt-0.5 ml-2">
+              <span className="line-through text-red-500/70 truncate max-w-[120px]">
+                {field === 'amount' ? formatCurrency(Number(from)) : field === 'functionDate' ? format(new Date(from), 'dd MMM yyyy') : String(from || '—')}
+              </span>
+              <span className="text-gray-400">→</span>
+              <span className="text-green-600 dark:text-green-400 font-medium truncate max-w-[120px]">
+                {field === 'amount' ? formatCurrency(Number(to)) : field === 'functionDate' ? format(new Date(to), 'dd MMM yyyy') : String(to || '—')}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const TransactionCard = ({ tx, onEdit, onDelete, onViewHistory }: {
+  tx: MOITransaction;
+  onEdit: () => void;
+  onDelete: () => void;
+  onViewHistory: () => void;
+}) => {
   const isGiven = tx.type === 'given';
+  const hasHistory = tx.editHistory && tx.editHistory.length > 0;
+
   return (
     <div className={cn(
       "bg-white dark:bg-gray-800/80 rounded-2xl border overflow-hidden",
@@ -507,6 +640,11 @@ const TransactionCard = ({ tx, onDelete }: { tx: MOITransaction; onDelete: () =>
                 )}>
                   {isGiven ? "Given" : "Received"}
                 </span>
+                {hasHistory && (
+                  <span className="text-[9px] px-1 py-0 rounded bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-300 font-medium">
+                    edited
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-muted-foreground truncate">
                 {functionTypeLabel(tx.functionType)}
@@ -516,19 +654,36 @@ const TransactionCard = ({ tx, onDelete }: { tx: MOITransaction; onDelete: () =>
               {tx.notes && <p className="text-[11px] text-muted-foreground mt-0.5 italic line-clamp-1">{tx.notes}</p>}
             </div>
           </div>
-          <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <div className="flex flex-col items-end gap-1 shrink-0">
             <span className={cn(
               "font-bold text-sm tabular-nums",
               isGiven ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"
             )}>
               {isGiven ? "-" : "+"}{formatCurrency(tx.amount)}
             </span>
-            <button
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-              onClick={onDelete}
-            >
-              <Trash2 size={13} />
-            </button>
+            <div className="flex items-center gap-0.5">
+              <button
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                onClick={onViewHistory}
+                title="View edit history"
+              >
+                <History size={13} />
+              </button>
+              <button
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                onClick={onEdit}
+                title="Edit"
+              >
+                <Pencil size={13} />
+              </button>
+              <button
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                onClick={onDelete}
+                title="Delete"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
           </div>
         </div>
       </div>

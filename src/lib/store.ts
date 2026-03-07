@@ -9,6 +9,11 @@ export type FilterOption = {
   amountRange: { min: number; max: number } | null;
 };
 
+export interface MOIEditRecord {
+  editedAt: string;
+  changes: Record<string, { from: string | number; to: string | number }>;
+}
+
 export interface MOITransaction {
   id: string;
   type: 'given' | 'received';
@@ -19,6 +24,7 @@ export interface MOITransaction {
   functionDate: Date;
   amount: number;
   notes?: string;
+  editHistory?: MOIEditRecord[];
   createdAt: Date;
 }
 
@@ -61,6 +67,7 @@ export type LoanStoreState = {
   // MOI functions
   fetchMoiTransactions: () => Promise<void>;
   addMoiTransaction: (tx: Omit<MOITransaction, 'id' | 'createdAt'>) => Promise<void>;
+  updateMoiTransaction: (id: string, tx: Partial<Omit<MOITransaction, 'id' | 'createdAt' | 'editHistory'>>) => Promise<void>;
   deleteMoiTransaction: (id: string) => Promise<void>;
   getTotalMOI: () => number;
   getTotalGiven: () => number;
@@ -529,6 +536,7 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
         functionDate: new Date(row.function_date),
         amount: parseFloat(row.amount),
         notes: row.notes ?? undefined,
+        editHistory: row.edit_history ?? [],
         createdAt: new Date(row.created_at),
       }));
 
@@ -579,6 +587,59 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
       }));
     } catch (error) {
       console.error('Error adding MOI transaction:', error);
+      throw error;
+    }
+  },
+
+  updateMoiTransaction: async (id, updates) => {
+    try {
+      const existing = get().moiTransactions.find(tx => tx.id === id);
+      if (!existing) throw new Error('Transaction not found');
+
+      // Build change record
+      const changes: Record<string, { from: string | number; to: string | number }> = {};
+      const fieldMap: Record<string, keyof MOITransaction> = {
+        type: 'type', personName: 'personName', relationship: 'relationship',
+        functionType: 'functionType', functionName: 'functionName', amount: 'amount', notes: 'notes',
+      };
+      for (const [key, txKey] of Object.entries(fieldMap)) {
+        if (updates[txKey as keyof typeof updates] !== undefined && updates[txKey as keyof typeof updates] !== existing[txKey]) {
+          changes[key] = { from: existing[txKey] as string | number ?? '', to: updates[txKey as keyof typeof updates] as string | number ?? '' };
+        }
+      }
+      if (updates.functionDate && updates.functionDate.getTime() !== new Date(existing.functionDate).getTime()) {
+        changes.functionDate = { from: existing.functionDate.toISOString(), to: updates.functionDate.toISOString() };
+      }
+
+      const newEditRecord: MOIEditRecord = { editedAt: new Date().toISOString(), changes };
+      const editHistory = [...(existing.editHistory ?? []), newEditRecord];
+
+      const dbUpdates: Record<string, unknown> = {};
+      if (updates.type !== undefined) dbUpdates.type = updates.type;
+      if (updates.personName !== undefined) dbUpdates.person_name = updates.personName;
+      if (updates.relationship !== undefined) dbUpdates.relationship = updates.relationship;
+      if (updates.functionType !== undefined) dbUpdates.function_type = updates.functionType;
+      if (updates.functionName !== undefined) dbUpdates.function_name = updates.functionName;
+      if (updates.functionDate !== undefined) dbUpdates.function_date = updates.functionDate.toISOString();
+      if (updates.amount !== undefined) dbUpdates.amount = updates.amount;
+      if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+      dbUpdates.edit_history = editHistory;
+
+      const { error } = await supabase
+        .from('moi_transactions')
+        .update(dbUpdates)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      set((state) => {
+        const updated = state.moiTransactions.map(tx =>
+          tx.id === id ? { ...tx, ...updates, editHistory: editHistory } : tx
+        );
+        return { moiTransactions: updated, moiEntries: updated };
+      });
+    } catch (error) {
+      console.error('Error updating MOI transaction:', error);
       throw error;
     }
   },
