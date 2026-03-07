@@ -7,6 +7,11 @@ export interface Payment {
   type: 'principal' | 'interest';
 }
 
+export interface EditRecord {
+  editedAt: string;
+  changes: Record<string, { from: string | number; to: string | number }>;
+}
+
 export interface Loan {
   id: string;
   borrowerName: string;
@@ -17,4 +22,5 @@ export interface Loan {
   payments: Payment[];
   loanType?: 'Gold' | 'Bond';
   goldGrams?: number;
+  editHistory?: EditRecord[];
 }

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Loan, Payment } from './types';
+import { Loan, Payment, EditRecord } from './types';
 import { supabase } from '@/integrations/supabase/client';
 
 // Define the store type with the interfaces from types.ts
@@ -91,6 +91,7 @@ const transformDbLoanToAppLoan = (dbLoan: any, payments: any[] = []): Loan => {
     notes: dbLoan.notes,
     loanType: dbLoan.loan_type as 'Gold' | 'Bond',
     goldGrams: dbLoan.gold_grams ? parseFloat(dbLoan.gold_grams) : undefined,
+    editHistory: dbLoan.edit_history ?? [],
     payments: payments.map(payment => ({
       id: payment.id,
       amount: parseFloat(payment.amount),
@@ -196,6 +197,29 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
   updateLoan: async (loanId, loanData) => {
     set({ isLoading: true, error: null });
     try {
+      const existing = get().loans.find(l => l.id === loanId);
+      if (!existing) throw new Error('Loan not found');
+
+      // Build change record
+      const changes: Record<string, { from: string | number; to: string | number }> = {};
+      const trackFields: { key: keyof Loan; label: string }[] = [
+        { key: 'borrowerName', label: 'borrowerName' },
+        { key: 'interestRate', label: 'interestRate' },
+        { key: 'notes', label: 'notes' },
+        { key: 'loanType', label: 'loanType' },
+        { key: 'goldGrams', label: 'goldGrams' },
+      ];
+      for (const { key } of trackFields) {
+        if (loanData[key] !== undefined && loanData[key] !== existing[key]) {
+          changes[key] = { from: (existing[key] as string | number) ?? '', to: (loanData[key] as string | number) ?? '' };
+        }
+      }
+
+      const editHistory: EditRecord[] = [
+        ...(existing.editHistory ?? []),
+        ...(Object.keys(changes).length > 0 ? [{ editedAt: new Date().toISOString(), changes }] : []),
+      ];
+
       const updateData: any = {};
       if (loanData.borrowerName !== undefined) updateData.borrower_name = loanData.borrowerName;
       if (loanData.amount !== undefined) updateData.amount = loanData.amount;
@@ -204,6 +228,7 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
       if (loanData.notes !== undefined) updateData.notes = loanData.notes;
       if (loanData.loanType !== undefined) updateData.loan_type = loanData.loanType;
       if (loanData.goldGrams !== undefined) updateData.gold_grams = loanData.goldGrams;
+      updateData.edit_history = editHistory;
 
       const { error } = await supabase
         .from('loans')
@@ -214,7 +239,7 @@ export const useLoanStore = create<LoanStoreState>((set, get) => ({
 
       set((state) => ({
         loans: state.loans.map((loan) =>
-          loan.id === loanId ? { ...loan, ...loanData } : loan
+          loan.id === loanId ? { ...loan, ...loanData, editHistory } : loan
         ),
         isLoading: false
       }));

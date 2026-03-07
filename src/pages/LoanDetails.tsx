@@ -2,9 +2,15 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, useLoanStore } from "@/lib/store";
-import { ArrowLeft, Edit, PlusCircle, Trash2, PiggyBank, Banknote } from "lucide-react";
+import { ArrowLeft, Edit, PlusCircle, Trash2, PiggyBank, Banknote, History, Clock } from "lucide-react";
 import { format } from "date-fns";
-import { Payment } from "@/lib/types";
+import { Payment, EditRecord } from "@/lib/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import PaymentDialog from "@/components/PaymentDialog";
 import { cn } from "@/lib/utils";
 import {
@@ -25,6 +31,7 @@ const LoanDetails = () => {
   const { toast } = useToast();
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
+  const [showEditHistory, setShowEditHistory] = useState(false);
 
   const loans = useLoanStore((state) => state.loans);
   const addPayment = useLoanStore((state) => state.addPayment);
@@ -94,12 +101,25 @@ const LoanDetails = () => {
           >
             <ArrowLeft size={18} className="text-white" />
           </button>
-          <button
-            onClick={() => navigate(`/loans/${loan.id}/edit`)}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/15 active:bg-white/25 transition-colors"
-          >
-            <Edit size={16} className="text-white" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowEditHistory(true)}
+              className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-white/15 active:bg-white/25 transition-colors"
+            >
+              <History size={16} className="text-white" />
+              {loan.editHistory && loan.editHistory.length > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-amber-400 text-[9px] font-bold text-gray-900 flex items-center justify-center px-1">
+                  {loan.editHistory.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => navigate(`/loans/${loan.id}/edit`)}
+              className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/15 active:bg-white/25 transition-colors"
+            >
+              <Edit size={16} className="text-white" />
+            </button>
+          </div>
         </div>
 
         {/* Name + tags */}
@@ -281,6 +301,73 @@ const LoanDetails = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit History Dialog */}
+      <Dialog open={showEditHistory} onOpenChange={setShowEditHistory}>
+        <DialogContent className="rounded-2xl max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm">
+              <History size={16} />
+              Edit History — {loan.borrowerName}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-3 py-2">
+            {(!loan.editHistory || loan.editHistory.length === 0) ? (
+              <div className="text-center py-8">
+                <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
+                  <Clock size={20} className="text-gray-400" />
+                </div>
+                <p className="text-sm text-muted-foreground">No edits yet</p>
+                <p className="text-[11px] text-muted-foreground mt-1">Edit history will appear here once changes are made.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {[...loan.editHistory].reverse().map((record, idx) => (
+                  <LoanEditHistoryCard key={idx} record={record} index={loan.editHistory!.length - idx} />
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+const LOAN_FIELD_LABELS: Record<string, string> = {
+  borrowerName: 'Borrower Name',
+  interestRate: 'Interest Rate',
+  notes: 'Notes',
+  loanType: 'Loan Type',
+  goldGrams: 'Gold (grams)',
+};
+
+const LoanEditHistoryCard = ({ record, index }: { record: EditRecord; index: number }) => {
+  const changeEntries = Object.entries(record.changes);
+  return (
+    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700/50 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Edit #{index}</span>
+        <span className="text-[10px] text-muted-foreground">
+          {format(new Date(record.editedAt), "dd MMM yyyy, hh:mm a")}
+        </span>
+      </div>
+      <div className="space-y-1.5">
+        {changeEntries.map(([field, { from, to }]) => (
+          <div key={field} className="text-[11px]">
+            <span className="font-medium text-gray-600 dark:text-gray-300">{LOAN_FIELD_LABELS[field] ?? field}:</span>
+            <div className="flex items-center gap-1.5 mt-0.5 ml-2">
+              <span className="line-through text-red-500/70 truncate max-w-[120px]">
+                {field === 'interestRate' ? `${from}%` : String(from || '—')}
+              </span>
+              <span className="text-gray-400">→</span>
+              <span className="text-green-600 dark:text-green-400 font-medium truncate max-w-[120px]">
+                {field === 'interestRate' ? `${to}%` : String(to || '—')}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
